@@ -1,0 +1,6 @@
+{
+  "name": "Friendverse 3D - Open World Life Sim",
+  "description": "A 3D open-world social life simulation game featuring customizable friend characters, daily routines, school, city districts, and Hinglish dialogue.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,348 @@
+import { CharacterId, CharacterProfile } from '../types/game';
+
+export const CHARACTERS: Record<CharacterId, CharacterProfile> = {
+  anirudh: {
+    id: 'anirudh',
+    name: 'Anirudh',
+    nickname: 'Ani',
+    gender: 'male',
+    tagline: 'Boyfriend of Vaishnavi. Always plotting the next canteen raid or sports match.',
+    bio: 'Casual, witty, sporty, and devoted boyfriend of Vaishnavi. Loves playing football, late-night cafe drives, and hanging out with the squad.',
+    appearance: {
+      hairColor: '#1e1b18',
+      hairStyle: 'messy_crop',
+      shirtColor: '#2563eb', // royal blue hoodie
+      pantsColor: '#1e293b', // dark cargo
+      shoesColor: '#f8fafc', // white sneakers
+      skinTone: '#d4a373',
+      accessory: 'watch',
+      height: 1.82,
+    },
+    relationships: {
+      vaishnavi: { targetId: 'vaishnavi', type: 'romantic', label: 'Girlfriend ❤️', affinityScore: 97, trustLevel: 98 },
+      chirag: { targetId: 'chirag', type: 'best_friend', label: 'Partner in Crime / Bhai', affinityScore: 92, trustLevel: 95 },
+      shreya: { targetId: 'shreya', type: 'friend', label: "Chirag's Girlfriend / Friend", affinityScore: 78, trustLevel: 80 },
+      zannat: { targetId: 'zannat', type: 'close_friend', label: 'BFF / Chai Partner', affinityScore: 84, trustLevel: 85 },
+      shagun: { targetId: 'shagun', type: 'friend', label: 'Gossip Queen / Friend', affinityScore: 75, trustLevel: 78 },
+      jatin: { targetId: 'jatin', type: 'close_friend', label: 'Bro / Gym Buddy', affinityScore: 88, trustLevel: 90 },
+    },
+    schedule: [
+      { startHour: 7, endHour: 8, locationId: 'home_anirudh', activityName: 'Getting ready at home', activityType: 'idle', targetPos: [-35, 0, -40], dialogueMood: 'sleepy' },
+      { startHour: 8, endHour: 10, locationId: 'school_classroom_a', activityName: 'Attending Physics with Vaishnavi', activityType: 'studying', targetPos: [0, 0, -85], dialogueMood: 'focused' },
+      { startHour: 10, endHour: 11, locationId: 'school_corridor', activityName: 'Walking with Vaishnavi in hallway', activityType: 'talking', targetPos: [-2, 0, -78], dialogueMood: 'romantic' },
+      { startHour: 11, endHour: 12, locationId: 'school_canteen', activityName: 'Eating samosa & chai with Vaishnavi & gang', activityType: 'eating', targetPos: [20, 0, -85], dialogueMood: 'hungry' },
+      { startHour: 12, endHour: 14, locationId: 'school_classroom_a', activityName: 'Math class (sitting beside Vaishu)', activityType: 'studying', targetPos: [0, 0, -85], dialogueMood: 'chill' },
+      { startHour: 14, endHour: 16, locationId: 'sports_football', activityName: 'Playing Football with Jatin', activityType: 'playing', targetPos: [55, 0, -75], dialogueMood: 'hyped' },
+      { startHour: 16, endHour: 18, locationId: 'cafe_central', activityName: 'Coffee date with Vaishnavi at Central Cafe', activityType: 'eating', targetPos: [-22, 0, 15], dialogueMood: 'romantic' },
+      { startHour: 18, endHour: 20, locationId: 'arcade_zone', activityName: 'Playing Neon Racing with Vaishnavi & Chirag', activityType: 'playing', targetPos: [28, 0, 22], dialogueMood: 'hyped' },
+      { startHour: 20, endHour: 22, locationId: 'beach_boardwalk', activityName: 'Sunset walk at the beach boardwalk', activityType: 'chilling', targetPos: [0, 0, 75], dialogueMood: 'romantic' },
+      { startHour: 22, endHour: 24, locationId: 'home_anirudh', activityName: 'Gaming & texting Vaishnavi at home', activityType: 'idle', targetPos: [-35, 0, -40], dialogueMood: 'sleepy' },
+    ],
+    homeLocationId: 'home_anirudh',
+    favoritePlaces: ['school_canteen', 'sports_football', 'cafe_central'],
+    personalityTraits: ['Sporty', 'Witty', 'Romantic', 'Chill'],
+    hobbies: ['Football', 'Console Gaming', 'Midnight Drives'],
+    dialogueStyle: {
+      greeting: ['Yo! Kya scene?', 'Vaishu kahan hai? Milte hain abhi.', 'Arre bhai, bolo!'],
+      slang: ['Arre tension mat le', 'Scene sort ho jayega', 'Bro chal canteen chalte hain!'],
+      schoolComplaints: ['Sir ka lecture sunke neend aa gayi yaar', 'Attendance lag gayi kya?', 'Proxy laga de meri please!'],
+      foodReactions: ['Ek plate hot samosa aur chai mil jaye bas!', 'Cold coffee with extra chocolate bro.'],
+    },
+  },
+
+  vaishnavi: {
+    id: 'vaishnavi',
+    name: 'Vaishnavi',
+    nickname: 'Vaishu',
+    gender: 'female',
+    tagline: 'Girlfriend of Anirudh. Bright, caring, organized, and studious.',
+    bio: 'Smart, warm, stylish, and deeply in love with Anirudh. Always helps the friend group stay on track with studies and loves peaceful cafe dates.',
+    appearance: {
+      hairColor: '#201815',
+      hairStyle: 'wavy_long',
+      shirtColor: '#0ea5e9', // sky blue stylish top
+      pantsColor: '#1e293b', // navy slim trousers
+      shoesColor: '#ffffff', // crisp white sneakers
+      skinTone: '#e8be96',
+      accessory: 'necklace',
+      height: 1.69,
+    },
+    relationships: {
+      anirudh: { targetId: 'anirudh', type: 'romantic', label: 'Boyfriend ❤️', affinityScore: 97, trustLevel: 98 },
+      chirag: { targetId: 'chirag', type: 'friend', label: 'Good Friend', affinityScore: 82, trustLevel: 80 },
+      shreya: { targetId: 'shreya', type: 'best_friend', label: 'Bestie / Study Partner', affinityScore: 94, trustLevel: 95 },
+      zannat: { targetId: 'zannat', type: 'close_friend', label: 'Close Friend', affinityScore: 86, trustLevel: 88 },
+      shagun: { targetId: 'shagun', type: 'close_friend', label: 'Canteen & Laughs Buddy', affinityScore: 88, trustLevel: 89 },
+      jatin: { targetId: 'jatin', type: 'friend', label: 'Friend / CS Partner', affinityScore: 81, trustLevel: 82 },
+    },
+    schedule: [
+      { startHour: 7, endHour: 8, locationId: 'home_vaishnavi', activityName: 'Getting ready for school', activityType: 'idle', targetPos: [-27, 0, -40], dialogueMood: 'chill' },
+      { startHour: 8, endHour: 10, locationId: 'school_classroom_a', activityName: 'Physics lecture with Anirudh', activityType: 'studying', targetPos: [2, 0, -85], dialogueMood: 'focused' },
+      { startHour: 10, endHour: 11, locationId: 'school_corridor', activityName: 'Corridor stroll with Anirudh & Shreya', activityType: 'talking', targetPos: [0, 0, -78], dialogueMood: 'romantic' },
+      { startHour: 11, endHour: 12, locationId: 'school_canteen', activityName: 'Canteen lunch with Anirudh', activityType: 'eating', targetPos: [18, 0, -85], dialogueMood: 'romantic' },
+      { startHour: 12, endHour: 14, locationId: 'school_library', activityName: 'Studying in the library', activityType: 'studying', targetPos: [-18, 0, -85], dialogueMood: 'focused' },
+      { startHour: 14, endHour: 16, locationId: 'park_central', activityName: 'Walking in the park with Shreya', activityType: 'talking', targetPos: [-28, 0, -10], dialogueMood: 'chill' },
+      { startHour: 16, endHour: 18, locationId: 'cafe_central', activityName: 'Coffee date with Anirudh at Central Cafe', activityType: 'eating', targetPos: [-20, 0, 16], dialogueMood: 'romantic' },
+      { startHour: 18, endHour: 20, locationId: 'mall_atrium', activityName: 'Shopping at Galaxy Mall', activityType: 'shopping', targetPos: [24, 0, -18], dialogueMood: 'chill' },
+      { startHour: 20, endHour: 22, locationId: 'beach_boardwalk', activityName: 'Sunset walk at the beach boardwalk', activityType: 'chilling', targetPos: [4, 0, 75], dialogueMood: 'romantic' },
+      { startHour: 22, endHour: 24, locationId: 'home_vaishnavi', activityName: 'Reading & calling Anirudh at home', activityType: 'idle', targetPos: [-27, 0, -40], dialogueMood: 'sleepy' },
+    ],
+    homeLocationId: 'home_vaishnavi',
+    favoritePlaces: ['cafe_central', 'beach_boardwalk', 'school_library'],
+    personalityTraits: ['Smart', 'Caring', 'Romantic', 'Organized'],
+    hobbies: ['Reading', 'Coffee Tasting', 'Music'],
+    dialogueStyle: {
+      greeting: ['Hey Ani! Hey everyone!', 'Good morning! Aaj class time pe chalna hai.', 'Kaisa hai Ani?'],
+      slang: ['Ani homework kiya ya bhool gaye?', 'Chalo Central Cafe mein coffee peete hain!', 'Shreya look at this cute place.'],
+      schoolComplaints: ['Exam next week hain, thoda padh lo sab!', 'Library mein thoda silence please haha.'],
+      foodReactions: ['Hot cappuccino and blueberry muffin is pure bliss.', 'Ani, samosa share karo please!'],
+    },
+  },
+
+  chirag: {
+    id: 'chirag',
+    name: 'Chirag',
+    nickname: 'Chiru',
+    gender: 'male',
+    tagline: 'Deeply in love with Shreya and obsessed with photography & cars.',
+    bio: 'Warm-hearted, observant, and stylish. Always keeping an eye out for Shreya and organizing the friend hangouts.',
+    appearance: {
+      hairColor: '#2b2118',
+      hairStyle: 'slick_fade',
+      shirtColor: '#059669', // emerald green polo
+      pantsColor: '#e2e8f0', // beige/light chinos
+      shoesColor: '#334155', // brown/slate loafers
+      skinTone: '#e0ac69',
+      accessory: 'watch',
+      height: 1.78,
+    },
+    relationships: {
+      shreya: { targetId: 'shreya', type: 'romantic', label: 'Girlfriend ❤️', affinityScore: 98, trustLevel: 98 },
+      anirudh: { targetId: 'anirudh', type: 'best_friend', label: 'Best Friend / Bhai', affinityScore: 92, trustLevel: 94 },
+      vaishnavi: { targetId: 'vaishnavi', type: 'friend', label: 'Good Friend', affinityScore: 82, trustLevel: 80 },
+      zannat: { targetId: 'zannat', type: 'friend', label: 'Close Friend', affinityScore: 82, trustLevel: 80 },
+      shagun: { targetId: 'shagun', type: 'friend', label: 'Friend', affinityScore: 76, trustLevel: 75 },
+      jatin: { targetId: 'jatin', type: 'close_friend', label: 'Bro / Gym Buddy', affinityScore: 85, trustLevel: 87 },
+    },
+    schedule: [
+      { startHour: 7, endHour: 8, locationId: 'home_chirag', activityName: 'Getting ready at home', activityType: 'idle', targetPos: [-18, 0, -40], dialogueMood: 'chill' },
+      { startHour: 8, endHour: 10, locationId: 'school_classroom_a', activityName: 'Attending Physics lecture', activityType: 'studying', targetPos: [4, 0, -85], dialogueMood: 'focused' },
+      { startHour: 10, endHour: 11, locationId: 'school_corridor', activityName: 'Walking with Shreya', activityType: 'talking', targetPos: [2, 0, -78], dialogueMood: 'romantic' },
+      { startHour: 11, endHour: 12, locationId: 'school_canteen', activityName: 'Snack break with Shreya & Ani', activityType: 'eating', targetPos: [22, 0, -85], dialogueMood: 'romantic' },
+      { startHour: 12, endHour: 14, locationId: 'school_library', activityName: 'Reading books in Library', activityType: 'studying', targetPos: [-20, 0, -85], dialogueMood: 'focused' },
+      { startHour: 14, endHour: 16, locationId: 'park_central', activityName: 'Photography in the Park', activityType: 'chilling', targetPos: [-28, 0, -10], dialogueMood: 'chill' },
+      { startHour: 16, endHour: 18, locationId: 'cafe_central', activityName: 'Coffee date with Shreya', activityType: 'talking', targetPos: [-20, 0, 18], dialogueMood: 'romantic' },
+      { startHour: 18, endHour: 20, locationId: 'mall_atrium', activityName: 'Window shopping at Mall', activityType: 'shopping', targetPos: [25, 0, -20], dialogueMood: 'chill' },
+      { startHour: 20, endHour: 22, locationId: 'beach_boardwalk', activityName: 'Walking by the waves', activityType: 'chilling', targetPos: [8, 0, 75], dialogueMood: 'romantic' },
+      { startHour: 22, endHour: 24, locationId: 'home_chirag', activityName: 'Resting at home', activityType: 'idle', targetPos: [-18, 0, -40], dialogueMood: 'sleepy' },
+    ],
+    homeLocationId: 'home_chirag',
+    favoritePlaces: ['cafe_central', 'beach_boardwalk', 'mall_atrium'],
+    personalityTraits: ['Caring', 'Romantic', 'Photographer', 'Chill'],
+    hobbies: ['Photography', 'Music', 'Weekend Treks'],
+    dialogueStyle: {
+      greeting: ['Hey Shreya! Hey guys!', 'Arre Chirag is here, kya plan hai?', 'Haan bro, bolo!'],
+      slang: ['Yaar Shreya ko ye place bohot pasand aayegi', 'Ek mast photo click karta hoon ruk', 'Chill karo sab!'],
+      schoolComplaints: ['Sir ne assignment announce kar diya kya?', 'Library chalna hai Shreya ke saath.'],
+      foodReactions: ['Hazelnut cappuccino is pure peace.', 'Shreya wants chocolate waffle, order kar dete hain.'],
+    },
+  },
+
+  shreya: {
+    id: 'shreya',
+    name: 'Shreya',
+    nickname: 'Shreyu',
+    gender: 'female',
+    tagline: 'Creative soul, aesthetic queen, and Chirag’s proud girlfriend.',
+    bio: 'Artistic, thoughtful, always carrying a cute diary. Loves warm beverages, beach sunsets, and taking candid shots with Chirag.',
+    appearance: {
+      hairColor: '#3d2314',
+      hairStyle: 'wavy_long',
+      shirtColor: '#ec4899', // rose pink cardigan
+      pantsColor: '#334155', // dark denim jeans
+      shoesColor: '#ffffff', // white canvas shoes
+      skinTone: '#f5c6a5',
+      accessory: 'headband',
+      height: 1.68,
+    },
+    relationships: {
+      chirag: { targetId: 'chirag', type: 'romantic', label: 'Boyfriend ❤️', affinityScore: 98, trustLevel: 99 },
+      anirudh: { targetId: 'anirudh', type: 'friend', label: 'Good Friend', affinityScore: 78, trustLevel: 80 },
+      vaishnavi: { targetId: 'vaishnavi', type: 'best_friend', label: 'Bestie', affinityScore: 94, trustLevel: 95 },
+      zannat: { targetId: 'zannat', type: 'best_friend', label: 'Bestie / Shopping Partner', affinityScore: 94, trustLevel: 95 },
+      shagun: { targetId: 'shagun', type: 'close_friend', label: 'Sisterly Friend', affinityScore: 86, trustLevel: 88 },
+      jatin: { targetId: 'jatin', type: 'friend', label: 'Friend', affinityScore: 77, trustLevel: 75 },
+    },
+    schedule: [
+      { startHour: 7, endHour: 8, locationId: 'home_shreya', activityName: 'Prepping notes at home', activityType: 'idle', targetPos: [-5, 0, -40], dialogueMood: 'chill' },
+      { startHour: 8, endHour: 10, locationId: 'school_classroom_a', activityName: 'Attending Physics lecture', activityType: 'studying', targetPos: [6, 0, -85], dialogueMood: 'focused' },
+      { startHour: 10, endHour: 11, locationId: 'school_corridor', activityName: 'Chatting with Vaishnavi & Chirag', activityType: 'talking', targetPos: [2, 0, -78], dialogueMood: 'romantic' },
+      { startHour: 11, endHour: 12, locationId: 'school_canteen', activityName: 'Lunch with Chirag & friends', activityType: 'eating', targetPos: [22, 0, -85], dialogueMood: 'romantic' },
+      { startHour: 12, endHour: 14, locationId: 'school_library', activityName: 'Sketching in Library with Vaishnavi', activityType: 'studying', targetPos: [-18, 0, -85], dialogueMood: 'focused' },
+      { startHour: 14, endHour: 16, locationId: 'park_central', activityName: 'Sitting near fountain with Chirag', activityType: 'talking', targetPos: [-30, 0, -10], dialogueMood: 'romantic' },
+      { startHour: 16, endHour: 18, locationId: 'cafe_central', activityName: 'Chilling at Central Cafe with Chirag', activityType: 'eating', targetPos: [-20, 0, 18], dialogueMood: 'romantic' },
+      { startHour: 18, endHour: 20, locationId: 'mall_atrium', activityName: 'Shopping for accessories with Zannat & Vaishu', activityType: 'shopping', targetPos: [25, 0, -20], dialogueMood: 'hyped' },
+      { startHour: 20, endHour: 22, locationId: 'beach_boardwalk', activityName: 'Sunset breeze with Chirag', activityType: 'chilling', targetPos: [8, 0, 75], dialogueMood: 'romantic' },
+      { startHour: 22, endHour: 24, locationId: 'home_shreya', activityName: 'Painting & journaling at home', activityType: 'idle', targetPos: [-5, 0, -40], dialogueMood: 'sleepy' },
+    ],
+    homeLocationId: 'home_shreya',
+    favoritePlaces: ['cafe_central', 'beach_boardwalk', 'park_central'],
+    personalityTraits: ['Aesthetic', 'Kind', 'Creative', 'Organized'],
+    hobbies: ['Sketching', 'Journaling', 'Baking Treats'],
+    dialogueStyle: {
+      greeting: ['Hii Chirag! Hii guys!', 'Sun na, kitna pretty view hai!', 'Aap log aagaye?'],
+      slang: ['Chirag look at this cute photo!', 'Vaishu & Zannat chal shopping chalte hain', 'Ye cafe aesthetic bohot pyara hai'],
+      schoolComplaints: ['Sir ka blackboard writing samajh nahi aa raha', 'Mere notes copy mat karna Ani!'],
+      foodReactions: ['Caramel latte and chocolate donut please!', 'Mera cold coffee share mat karna Chirag haha.'],
+    },
+  },
+
+  zannat: {
+    id: 'zannat',
+    name: 'Zannat',
+    nickname: 'Zan',
+    gender: 'female',
+    tagline: 'High energy, unapologetic fashion icon, loves drama & dance.',
+    bio: 'Fiercely confident and stylish. Always knows the latest gossip, coordinates weekend outings, and stands up for her friends.',
+    appearance: {
+      hairColor: '#1a1016',
+      hairStyle: 'straight_long',
+      shirtColor: '#8b5cf6', // purple lilac top
+      pantsColor: '#0f172a', // stylish black flared trousers
+      shoesColor: '#e2e8f0', // trendy white platforms
+      skinTone: '#dfb08c',
+      accessory: 'earrings',
+      height: 1.70,
+    },
+    relationships: {
+      anirudh: { targetId: 'anirudh', type: 'close_friend', label: 'BFF / Partner in Crime', affinityScore: 84, trustLevel: 85 },
+      vaishnavi: { targetId: 'vaishnavi', type: 'close_friend', label: 'Close Friend', affinityScore: 86, trustLevel: 88 },
+      chirag: { targetId: 'chirag', type: 'friend', label: 'Close Friend', affinityScore: 82, trustLevel: 80 },
+      shreya: { targetId: 'shreya', type: 'best_friend', label: 'Bestie / Twin Flame', affinityScore: 94, trustLevel: 95 },
+      shagun: { targetId: 'shagun', type: 'best_friend', label: 'Gossip Duo / Soul Sister', affinityScore: 92, trustLevel: 91 },
+      jatin: { targetId: 'jatin', type: 'friend', label: 'Roast Buddy', affinityScore: 80, trustLevel: 82 },
+    },
+    schedule: [
+      { startHour: 7, endHour: 8, locationId: 'home_zannat', activityName: 'Makeup and outfit check', activityType: 'idle', targetPos: [10, 0, -40], dialogueMood: 'chill' },
+      { startHour: 8, endHour: 10, locationId: 'school_classroom_b', activityName: 'English literature lecture', activityType: 'studying', targetPos: [0, 0, -95], dialogueMood: 'focused' },
+      { startHour: 10, endHour: 11, locationId: 'school_corridor', activityName: 'Corridor gossip with Shagun', activityType: 'talking', targetPos: [-2, 0, -78], dialogueMood: 'hyped' },
+      { startHour: 11, endHour: 12, locationId: 'school_canteen', activityName: 'Chai & Maggi time with gang', activityType: 'eating', targetPos: [18, 0, -85], dialogueMood: 'hungry' },
+      { startHour: 12, endHour: 14, locationId: 'school_classroom_b', activityName: 'Economics class (whispering)', activityType: 'studying', targetPos: [0, 0, -95], dialogueMood: 'sleepy' },
+      { startHour: 14, endHour: 16, locationId: 'mall_atrium', activityName: 'Trying perfumes & bags at Mall', activityType: 'shopping', targetPos: [22, 0, -22], dialogueMood: 'hyped' },
+      { startHour: 16, endHour: 18, locationId: 'cafe_central', activityName: 'Frappe & reels with Shreya & Shagun', activityType: 'talking', targetPos: [-24, 0, 16], dialogueMood: 'chill' },
+      { startHour: 18, endHour: 20, locationId: 'arcade_zone', activityName: 'Challenging Jatin at Rhythm Dance', activityType: 'playing', targetPos: [26, 0, 24], dialogueMood: 'hyped' },
+      { startHour: 20, endHour: 22, locationId: 'beach_boardwalk', activityName: 'Breeze and candid photo session', activityType: 'chilling', targetPos: [-10, 0, 75], dialogueMood: 'chill' },
+      { startHour: 22, endHour: 24, locationId: 'home_zannat', activityName: 'Skincare routine & calling friends', activityType: 'idle', targetPos: [10, 0, -40], dialogueMood: 'chill' },
+    ],
+    homeLocationId: 'home_zannat',
+    favoritePlaces: ['mall_atrium', 'cafe_central', 'arcade_zone'],
+    personalityTraits: ['Sassy', 'Energetic', 'Fashionista', 'Loyal'],
+    hobbies: ['Dance', 'Fashion Styling', 'Bingeing Shows'],
+    dialogueStyle: {
+      greeting: ['Hey babes! Kya chal raha hai?', 'OMG finally mil gaye tum log!', 'Hello hello people!'],
+      slang: ['Aapko pata hai aaj kya hua?', 'Literally no way bro!', 'Aaj mall mein sales chal rahi hai, chalo!'],
+      schoolComplaints: ['Ye assignment kon complete karta hai bro?', 'Attendance short hui to dekha jayega!'],
+      foodReactions: ['Maggi with extra cheese is my therapy!', 'Iced Peach Iced Tea mangwa do koi!'],
+    },
+  },
+
+  shagun: {
+    id: 'shagun',
+    name: 'Shagun',
+    nickname: 'Gunu',
+    gender: 'female',
+    tagline: 'Warm-hearted, dramatic, knows everybody and loves street food.',
+    bio: 'Sweet, empathetic, and hilarious. The life of every group conversation with an unbeatable sense of humor and love for food trips.',
+    appearance: {
+      hairColor: '#281a12',
+      hairStyle: 'curly_bob',
+      shirtColor: '#f59e0b', // warm amber / mustard sweater
+      pantsColor: '#475569', // grey slim jeans
+      shoesColor: '#10b981', // emerald sneakers
+      skinTone: '#e3ad85',
+      accessory: 'glasses',
+      height: 1.65,
+    },
+    relationships: {
+      anirudh: { targetId: 'anirudh', type: 'friend', label: 'Bhai / Sarcasm Partner', affinityScore: 75, trustLevel: 78 },
+      vaishnavi: { targetId: 'vaishnavi', type: 'close_friend', label: 'Close Friend', affinityScore: 88, trustLevel: 89 },
+      chirag: { targetId: 'chirag', type: 'friend', label: 'Chill Friend', affinityScore: 76, trustLevel: 75 },
+      shreya: { targetId: 'shreya', type: 'close_friend', label: 'Creative Confidante', affinityScore: 86, trustLevel: 88 },
+      zannat: { targetId: 'zannat', type: 'best_friend', label: 'Drama Queen Partner', affinityScore: 92, trustLevel: 91 },
+      jatin: { targetId: 'jatin', type: 'close_friend', label: 'Food Hunting Buddy', affinityScore: 85, trustLevel: 86 },
+    },
+    schedule: [
+      { startHour: 7, endHour: 8, locationId: 'home_shagun', activityName: 'Eating breakfast at home', activityType: 'idle', targetPos: [25, 0, -40], dialogueMood: 'hungry' },
+      { startHour: 8, endHour: 10, locationId: 'school_classroom_b', activityName: 'English literature lecture', activityType: 'studying', targetPos: [4, 0, -95], dialogueMood: 'focused' },
+      { startHour: 10, endHour: 11, locationId: 'school_corridor', activityName: 'Corridor banter with Zannat', activityType: 'talking', targetPos: [-2, 0, -78], dialogueMood: 'hyped' },
+      { startHour: 11, endHour: 12, locationId: 'school_canteen', activityName: 'Food hunt at canteen', activityType: 'eating', targetPos: [16, 0, -85], dialogueMood: 'hungry' },
+      { startHour: 12, endHour: 14, locationId: 'school_classroom_b', activityName: 'Listening to economics lecture', activityType: 'studying', targetPos: [4, 0, -95], dialogueMood: 'sleepy' },
+      { startHour: 14, endHour: 16, locationId: 'park_central', activityName: 'Walking in the Park with gang', activityType: 'chilling', targetPos: [-30, 0, -10], dialogueMood: 'chill' },
+      { startHour: 16, endHour: 18, locationId: 'cafe_central', activityName: 'Snacking at Central Cafe', activityType: 'eating', targetPos: [-26, 0, 14], dialogueMood: 'chill' },
+      { startHour: 18, endHour: 20, locationId: 'mall_atrium', activityName: 'Food court snacks at Mall', activityType: 'eating', targetPos: [28, 0, -24], dialogueMood: 'hungry' },
+      { startHour: 20, endHour: 22, locationId: 'beach_boardwalk', activityName: 'Chai at beach stalls', activityType: 'eating', targetPos: [-18, 0, 75], dialogueMood: 'chill' },
+      { startHour: 22, endHour: 24, locationId: 'home_shagun', activityName: 'Watching comedy shows at home', activityType: 'idle', targetPos: [25, 0, -40], dialogueMood: 'sleepy' },
+    ],
+    homeLocationId: 'home_shagun',
+    favoritePlaces: ['school_canteen', 'cafe_central', 'mall_atrium'],
+    personalityTraits: ['Humorous', 'Foodie', 'Friendly', 'Expressive'],
+    hobbies: ['Cooking', 'Stand-up Comedy', 'Podcasts'],
+    dialogueStyle: {
+      greeting: ['Arre mere pyare dosto!', 'Hello ji! Aaj kaun treat de raha hai?', 'Kaisi chal rahi hai life?'],
+      slang: ['Mera pet pooja ka time ho gaya', 'Bhai yeh to alag hi level ki comedy hai', 'Zannat sun ek zabardast baat batati hoon!'],
+      schoolComplaints: ['Exam aa gaye aur maine syllabus bhi nahi dekha!', 'Teacher ne mujhe hi kyun question poocha yaar!'],
+      foodReactions: ['Garma-garam pav bhaji or noodles? Both please!', 'Diet kal se pakka shuru.'],
+    },
+  },
+
+  jatin: {
+    id: 'jatin',
+    name: 'Jatin',
+    nickname: 'Jattu',
+    gender: 'male',
+    tagline: 'Tech geek, gym enthusiast, and unshakeable protector of the squad.',
+    bio: 'Tall, athletic, and tech-savvy. Always building something on his laptop or hitting the gym and football pitch with Anirudh.',
+    appearance: {
+      hairColor: '#171717',
+      hairStyle: 'short_textured',
+      shirtColor: '#dc2626', // crimson red athletic shirt
+      pantsColor: '#1e293b', // charcoal athletic joggers
+      shoesColor: '#0284c7', // cyan gym sneakers
+      skinTone: '#cf9868',
+      accessory: 'cap',
+      height: 1.86,
+    },
+    relationships: {
+      anirudh: { targetId: 'anirudh', type: 'close_friend', label: 'Bhai / Gym & Gaming Partner', affinityScore: 88, trustLevel: 90 },
+      vaishnavi: { targetId: 'vaishnavi', type: 'friend', label: 'Friend / CS Partner', affinityScore: 81, trustLevel: 82 },
+      chirag: { targetId: 'chirag', type: 'close_friend', label: 'Bro', affinityScore: 85, trustLevel: 87 },
+      shreya: { targetId: 'shreya', type: 'friend', label: 'Good Friend', affinityScore: 77, trustLevel: 75 },
+      zannat: { targetId: 'zannat', type: 'friend', label: 'Roast Buddy', affinityScore: 80, trustLevel: 82 },
+      shagun: { targetId: 'shagun', type: 'close_friend', label: 'Food & Laughs Buddy', affinityScore: 85, trustLevel: 86 },
+    },
+    schedule: [
+      { startHour: 7, endHour: 8, locationId: 'home_jatin', activityName: 'Morning workout & protein shake', activityType: 'idle', targetPos: [40, 0, -40], dialogueMood: 'hyped' },
+      { startHour: 8, endHour: 10, locationId: 'school_classroom_a', activityName: 'Computer Science lecture', activityType: 'studying', targetPos: [-4, 0, -85], dialogueMood: 'focused' },
+      { startHour: 10, endHour: 11, locationId: 'school_corridor', activityName: 'Checking phone in corridor', activityType: 'walking', targetPos: [-6, 0, -78], dialogueMood: 'chill' },
+      { startHour: 11, endHour: 12, locationId: 'school_canteen', activityName: 'Protein snack at canteen', activityType: 'eating', targetPos: [24, 0, -85], dialogueMood: 'hungry' },
+      { startHour: 12, endHour: 14, locationId: 'school_classroom_a', activityName: 'Physics problem solving', activityType: 'studying', targetPos: [-4, 0, -85], dialogueMood: 'focused' },
+      { startHour: 14, endHour: 16, locationId: 'sports_football', activityName: 'Football shootout with Anirudh', activityType: 'playing', targetPos: [55, 0, -70], dialogueMood: 'hyped' },
+      { startHour: 16, endHour: 18, locationId: 'cafe_central', activityName: 'Chilling at Central Cafe', activityType: 'eating', targetPos: [-22, 0, 20], dialogueMood: 'chill' },
+      { startHour: 18, endHour: 20, locationId: 'arcade_zone', activityName: 'High score attempt in Arcade', activityType: 'playing', targetPos: [32, 0, 22], dialogueMood: 'hyped' },
+      { startHour: 20, endHour: 22, locationId: 'beach_boardwalk', activityName: 'Late night boardwalk walk', activityType: 'chilling', targetPos: [15, 0, 75], dialogueMood: 'chill' },
+      { startHour: 22, endHour: 24, locationId: 'home_jatin', activityName: 'Coding project & rest at home', activityType: 'idle', targetPos: [40, 0, -40], dialogueMood: 'sleepy' },
+    ],
+    homeLocationId: 'home_jatin',
+    favoritePlaces: ['sports_football', 'arcade_zone', 'cafe_central'],
+    personalityTraits: ['Athletic', 'Techie', 'Loyal', 'Direct'],
+    hobbies: ['Gym Workouts', 'Coding', 'Football', 'PC Hardware'],
+    dialogueStyle: {
+      greeting: ['Yo Ani! What’s up squad?', 'Bhai kya haal chaal?', 'Sab theek thak?'],
+      slang: ['Aaj ground pe match karte hain!', 'Coding assignment maine pehle hi kar liya tha', 'Chal protein shake peete hain'],
+      schoolComplaints: ['Lab computers ka internet itna slow kyun hai?', 'CS practical mein full marks aayenge tension mat le.'],
+      foodReactions: ['High protein sandwich and cold coffee please.', 'Ani, canteen ka samosa cheat meal count hoga!'],
+    },
+  },
+};
+
+export const CHARACTER_LIST = Object.values(CHARACTERS);
