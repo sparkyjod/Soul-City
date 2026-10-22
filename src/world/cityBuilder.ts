@@ -1,5 +1,16 @@
 import * as THREE from 'three';
 import { materialLibrary } from './materials';
+import {
+  CENTERLINE,
+  CROSSWALKS,
+  HOME_PLOTS,
+  INTERSECTIONS,
+  ROADS,
+  SIDEWALKS,
+  TERRAIN,
+  getCircleFootprint,
+  getRectFootprint,
+} from './worldData';
 
 export interface CollisionBox {
   minX: number;
@@ -84,27 +95,27 @@ export class CityBuilder {
   }
 
   private buildTerrain() {
-    // Large city base terrain
-    const baseGeo = new THREE.PlaneGeometry(320, 320);
+    // Large city base terrain (geometry from worldData.TERRAIN)
+    const baseGeo = new THREE.PlaneGeometry(TERRAIN.groundSize, TERRAIN.groundSize);
     const baseMesh = new THREE.Mesh(baseGeo, materialLibrary.get('grass'));
     baseMesh.rotation.x = -Math.PI / 2;
-    baseMesh.position.y = -0.05;
+    baseMesh.position.y = TERRAIN.groundY;
     baseMesh.receiveShadow = true;
     this.cityGroup.add(baseMesh);
 
-    // Dynamic Ocean surface at south (z: 82 to 160)
-    const oceanGeo = new THREE.PlaneGeometry(320, 80, 24, 16);
+    // Dynamic Ocean surface at south
+    const oceanGeo = new THREE.PlaneGeometry(TERRAIN.ocean.width, TERRAIN.ocean.depth, 24, 16);
     const oceanMesh = new THREE.Mesh(oceanGeo, materialLibrary.get('water'));
     oceanMesh.rotation.x = -Math.PI / 2;
-    oceanMesh.position.set(0, 0.08, 122);
+    oceanMesh.position.set(TERRAIN.ocean.centerX, TERRAIN.ocean.y, TERRAIN.ocean.centerZ);
     this.animatedWater = oceanMesh;
     this.cityGroup.add(oceanMesh);
 
-    // Sandy beach buffer (z: 74 to 96)
-    const sandGeo = new THREE.PlaneGeometry(300, 26);
+    // Sandy beach buffer
+    const sandGeo = new THREE.PlaneGeometry(TERRAIN.sand.width, TERRAIN.sand.depth);
     const sandMesh = new THREE.Mesh(sandGeo, materialLibrary.get('sand'));
     sandMesh.rotation.x = -Math.PI / 2;
-    sandMesh.position.set(0, 0.1, 86);
+    sandMesh.position.set(TERRAIN.sand.centerX, TERRAIN.sand.y, TERRAIN.sand.centerZ);
     sandMesh.receiveShadow = true;
     this.cityGroup.add(sandMesh);
   }
@@ -112,75 +123,44 @@ export class CityBuilder {
   private buildRoadNetwork() {
     const roadsGroup = new THREE.Group();
 
-    // 1. Main North-South Central Boulevard (x = 0, z from -110 to 65)
-    const mainAvenueGeo = new THREE.PlaneGeometry(16, 175);
-    const mainAvenue = new THREE.Mesh(mainAvenueGeo, materialLibrary.get('asphalt'));
-    mainAvenue.rotation.x = -Math.PI / 2;
-    mainAvenue.position.set(0, 0.02, -22.5);
-    mainAvenue.receiveShadow = true;
-    roadsGroup.add(mainAvenue);
-
-    // 2. East-West School Avenue (z = -60, x from -90 to 90)
-    const schoolRdGeo = new THREE.PlaneGeometry(180, 14);
-    const schoolRd = new THREE.Mesh(schoolRdGeo, materialLibrary.get('asphalt'));
-    schoolRd.rotation.x = -Math.PI / 2;
-    schoolRd.position.set(0, 0.02, -60);
-    schoolRd.receiveShadow = true;
-    roadsGroup.add(schoolRd);
-
-    // 3. East-West Downtown Street (z = 0, x from -90 to 90)
-    const downtownStGeo = new THREE.PlaneGeometry(180, 14);
-    const downtownSt = new THREE.Mesh(downtownStGeo, materialLibrary.get('asphalt'));
-    downtownSt.rotation.x = -Math.PI / 2;
-    downtownSt.position.set(0, 0.02, 0);
-    downtownSt.receiveShadow = true;
-    roadsGroup.add(downtownSt);
-
-    // 4. East-West Coastal Drive (z = 60, x from -90 to 90)
-    const coastalRdGeo = new THREE.PlaneGeometry(180, 14);
-    const coastalRd = new THREE.Mesh(coastalRdGeo, materialLibrary.get('asphalt'));
-    coastalRd.rotation.x = -Math.PI / 2;
-    coastalRd.position.set(0, 0.02, 60);
-    coastalRd.receiveShadow = true;
-    roadsGroup.add(coastalRd);
-
-    // Sidewalks along Main Avenue
-    const swWestGeo = new THREE.PlaneGeometry(4.5, 175);
-    const swWest = new THREE.Mesh(swWestGeo, materialLibrary.get('sidewalk'));
-    swWest.rotation.x = -Math.PI / 2;
-    swWest.position.set(-10.25, 0.04, -22.5);
-    roadsGroup.add(swWest);
-
-    const swEastGeo = new THREE.PlaneGeometry(4.5, 175);
-    const swEast = new THREE.Mesh(swEastGeo, materialLibrary.get('sidewalk'));
-    swEast.rotation.x = -Math.PI / 2;
-    swEast.position.set(10.25, 0.04, -22.5);
-    roadsGroup.add(swEast);
-
-    // Pedestrian Zebra Crossings at Intersections
-    const crosswalkGeo = new THREE.PlaneGeometry(16, 4.5);
-    const intersections = [-60, 0, 60];
-    intersections.forEach((iz) => {
-      // North and South of intersection
-      const cwNorth = new THREE.Mesh(crosswalkGeo, materialLibrary.get('crosswalkMat'));
-      cwNorth.rotation.x = -Math.PI / 2;
-      cwNorth.position.set(0, 0.03, iz - 9.5);
-      roadsGroup.add(cwNorth);
-
-      const cwSouth = new THREE.Mesh(crosswalkGeo, materialLibrary.get('crosswalkMat'));
-      cwSouth.rotation.x = -Math.PI / 2;
-      cwSouth.position.set(0, 0.03, iz + 9.5);
-      roadsGroup.add(cwSouth);
+    // Asphalt road segments (worldData.ROADS — also drives the minimap)
+    ROADS.forEach((road) => {
+      const geoW = road.orientation === 'north_south' ? road.width : road.length;
+      const geoD = road.orientation === 'north_south' ? road.length : road.width;
+      const roadMesh = new THREE.Mesh(new THREE.PlaneGeometry(geoW, geoD), materialLibrary.get('asphalt'));
+      roadMesh.rotation.x = -Math.PI / 2;
+      roadMesh.position.set(road.centerX, road.y, road.centerZ);
+      roadMesh.receiveShadow = true;
+      roadsGroup.add(roadMesh);
     });
 
-    // Yellow Dashed Centerlines
+    // Sidewalks (worldData.SIDEWALKS)
+    SIDEWALKS.forEach((sw) => {
+      const swMesh = new THREE.Mesh(new THREE.PlaneGeometry(sw.width, sw.length), materialLibrary.get('sidewalk'));
+      swMesh.rotation.x = -Math.PI / 2;
+      swMesh.position.set(sw.centerX, sw.y, sw.centerZ);
+      roadsGroup.add(swMesh);
+    });
+
+    // Pedestrian Zebra Crossings (worldData.CROSSWALKS, derived from INTERSECTIONS)
+    CROSSWALKS.forEach((cw) => {
+      const cwMesh = new THREE.Mesh(new THREE.PlaneGeometry(cw.width, cw.depth), materialLibrary.get('crosswalkMat'));
+      cwMesh.rotation.x = -Math.PI / 2;
+      cwMesh.position.set(cw.x, cw.y, cw.z);
+      roadsGroup.add(cwMesh);
+    });
+
+    // Yellow Dashed Centerlines (worldData.CENTERLINE, skipped near intersections)
     const dashMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-    for (let z = -105; z <= 65; z += 7) {
-      if (Math.abs(z - (-60)) < 8 || Math.abs(z - 0) < 8 || Math.abs(z - 60) < 8) continue;
-      const dashGeo = new THREE.PlaneGeometry(0.4, 3.5);
+    for (let z = CENTERLINE.zFrom; z <= CENTERLINE.zTo; z += CENTERLINE.step) {
+      const nearIntersection = INTERSECTIONS.some(
+        (ix) => Math.abs(z - ix.z) < CENTERLINE.skipNearIntersection
+      );
+      if (nearIntersection) continue;
+      const dashGeo = new THREE.PlaneGeometry(CENTERLINE.dashWidth, CENTERLINE.dashLength);
       const dash = new THREE.Mesh(dashGeo, dashMat);
       dash.rotation.x = -Math.PI / 2;
-      dash.position.set(0, 0.035, z);
+      dash.position.set(CENTERLINE.x, 0.035, z);
       roadsGroup.add(dash);
     }
 
@@ -198,10 +178,12 @@ export class CityBuilder {
     schoolGroup.add(court);
 
     // School Main Floor Slab (interior walkable foundation, z: -64 to -108, x: -34 to 34)
-    const schoolFloorGeo = new THREE.BoxGeometry(68, 0.2, 44);
+    // Footprint from worldData so the minimap draws the exact same rectangle.
+    const schoolFp = getRectFootprint('school');
+    const schoolFloorGeo = new THREE.BoxGeometry(schoolFp.width, 0.2, schoolFp.depth);
     const schoolFloorMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.35 });
     const schoolFloor = new THREE.Mesh(schoolFloorGeo, schoolFloorMat);
-    schoolFloor.position.set(0, 0.1, -86);
+    schoolFloor.position.set(schoolFp.x, 0.1, schoolFp.z);
     schoolFloor.receiveShadow = true;
     schoolGroup.add(schoolFloor);
 
@@ -361,11 +343,12 @@ export class CityBuilder {
     this.addCollision(-18, -84, 3.4, 1.6);
 
     // 5. Football Field & Sports Pitch (East of School: [58, 0, -75])
-    const turfGeo = new THREE.PlaneGeometry(42, 58);
+    const pitchFp = getRectFootprint('football_pitch');
+    const turfGeo = new THREE.PlaneGeometry(pitchFp.width, pitchFp.depth);
     const turfMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.88 });
     const turf = new THREE.Mesh(turfGeo, turfMat);
     turf.rotation.x = -Math.PI / 2;
-    turf.position.set(58, 0.05, -75);
+    turf.position.set(pitchFp.x, 0.05, pitchFp.z);
     turf.receiveShadow = true;
     schoolGroup.add(turf);
 
@@ -440,18 +423,9 @@ export class CityBuilder {
     const resGroup = new THREE.Group();
 
     // 7 Enterable Homes for Anirudh, Vaishnavi, Chirag, Shreya, Zannat, Shagun, Jatin
-    const homes = [
-      { id: 'anirudh', name: "Anirudh's Home", x: -38, z: -40, color: 0x2563eb, roof: 0x1e3a8a, bedColor: 0x3b82f6 },
-      { id: 'vaishnavi', name: "Vaishnavi's Home", x: -26, z: -40, color: 0x0ea5e9, roof: 0x0369a1, bedColor: 0x38bdf8 },
-      { id: 'chirag', name: "Chirag's Home", x: -14, z: -40, color: 0x059669, roof: 0x064e3b, bedColor: 0x10b981 },
-      { id: 'shreya', name: "Shreya's Home", x: -2, z: -40, color: 0xec4899, roof: 0x9d174d, bedColor: 0xf472b6 },
-      { id: 'zannat', name: "Zannat's Home", x: 12, z: -40, color: 0x8b5cf6, roof: 0x581c87, bedColor: 0xa855f7 },
-      { id: 'shagun', name: "Shagun's Home", x: 26, z: -40, color: 0xf59e0b, roof: 0x78350f, bedColor: 0xfbbf24 },
-      { id: 'jatin', name: "Jatin's Home", x: 40, z: -40, color: 0xdc2626, roof: 0x7f1d1d, bedColor: 0xef4444 },
-    ];
-
-    homes.forEach((home) => {
-      const houseGroup = this.createEnterableHouse(home.x, home.z, home.name, home.color, home.roof, home.bedColor);
+    // Plot positions & colors come from worldData.HOME_PLOTS (shared with the minimap).
+    HOME_PLOTS.forEach((home) => {
+      const houseGroup = this.createEnterableHouse(home.x, home.z, home.name, home.color, home.roofColor, home.bedColor);
       resGroup.add(houseGroup);
     });
 
@@ -581,9 +555,10 @@ export class CityBuilder {
     const plazaGroup = new THREE.Group();
 
     // Central circular paved plaza (x = 0, z = 0, radius = 16)
-    const plazaPavingGeo = new THREE.CylinderGeometry(15, 15, 0.1, 24);
+    const plazaFp = getCircleFootprint('plaza');
+    const plazaPavingGeo = new THREE.CylinderGeometry(plazaFp.radius, plazaFp.radius, 0.1, 24);
     const plazaPaving = new THREE.Mesh(plazaPavingGeo, materialLibrary.get('sidewalk'));
-    plazaPaving.position.set(0, 0.05, 0);
+    plazaPaving.position.set(plazaFp.x, 0.05, plazaFp.z);
     plazaPaving.receiveShadow = true;
     plazaGroup.add(plazaPaving);
 
@@ -669,10 +644,11 @@ export class CityBuilder {
     cafeParkGroup.add(terrace);
 
     // Warm Parquet Interior Floor
-    const cafeFloorGeo = new THREE.PlaneGeometry(14, 12);
+    const cafeFp = getRectFootprint('cafe');
+    const cafeFloorGeo = new THREE.PlaneGeometry(cafeFp.width, cafeFp.depth);
     const cafeFloor = new THREE.Mesh(cafeFloorGeo, materialLibrary.get('cafeParquet'));
     cafeFloor.rotation.x = -Math.PI / 2;
-    cafeFloor.position.set(-22, 0.08, 14);
+    cafeFloor.position.set(cafeFp.x, 0.08, cafeFp.z);
     cafeParkGroup.add(cafeFloor);
 
     // Café Walls (Leaving wide open entrance from south at z = 20)
@@ -738,9 +714,10 @@ export class CityBuilder {
     });
 
     // 2. Willow Green Park (West: center [-30, 0, -10])
-    const parkGrassGeo = new THREE.BoxGeometry(36, 0.1, 32);
+    const parkFp = getRectFootprint('park');
+    const parkGrassGeo = new THREE.BoxGeometry(parkFp.width, 0.1, parkFp.depth);
     const parkGrass = new THREE.Mesh(parkGrassGeo, materialLibrary.get('parkGrass'));
-    parkGrass.position.set(-30, 0.05, -10);
+    parkGrass.position.set(parkFp.x, 0.05, parkFp.z);
     cafeParkGroup.add(parkGrass);
 
     // Park Gazebo
@@ -759,10 +736,11 @@ export class CityBuilder {
 
     // 1. Enterable Galaxy Mall (East: center [25, 0, -18])
     // Polished Marble Atrium Floor
-    const mallFloorGeo = new THREE.PlaneGeometry(24, 22);
+    const mallFp = getRectFootprint('mall');
+    const mallFloorGeo = new THREE.PlaneGeometry(mallFp.width, mallFp.depth);
     const mallFloor = new THREE.Mesh(mallFloorGeo, materialLibrary.get('mallFloor'));
     mallFloor.rotation.x = -Math.PI / 2;
-    mallFloor.position.set(25, 0.08, -18);
+    mallFloor.position.set(mallFp.x, 0.08, mallFp.z);
     commGroup.add(mallFloor);
 
     // Mall Outer Perimeter Walls (North, East, South wings leaving wide 8m entrance at z = -7)
@@ -812,11 +790,12 @@ export class CityBuilder {
     this.addCollision(30, -24, 5.2, 1.8);
 
     // 2. Enterable Pixel Pulse Arcade (East: center [28, 0, 22])
-    const arcadeFloorGeo = new THREE.PlaneGeometry(16, 14);
+    const arcadeFp = getRectFootprint('arcade');
+    const arcadeFloorGeo = new THREE.PlaneGeometry(arcadeFp.width, arcadeFp.depth);
     const arcadeFloorMat = new THREE.MeshStandardMaterial({ color: 0x090918, roughness: 0.9 });
     const arcadeFloor = new THREE.Mesh(arcadeFloorGeo, arcadeFloorMat);
     arcadeFloor.rotation.x = -Math.PI / 2;
-    arcadeFloor.position.set(28, 0.08, 22);
+    arcadeFloor.position.set(arcadeFp.x, 0.08, arcadeFp.z);
     commGroup.add(arcadeFloor);
 
     // Arcade Walls with open doorway at z = 15
@@ -872,16 +851,18 @@ export class CityBuilder {
     const waterGroup = new THREE.Group();
 
     // Wooden Boardwalk Deck (x = -70 to 70, z = 74 to 82)
-    const bwGeo = new THREE.BoxGeometry(160, 0.4, 12);
+    const boardwalkFp = getRectFootprint('boardwalk');
+    const bwGeo = new THREE.BoxGeometry(boardwalkFp.width, 0.4, boardwalkFp.depth);
     const bw = new THREE.Mesh(bwGeo, materialLibrary.get('boardwalkWood'));
-    bw.position.set(0, 0.2, 75);
+    bw.position.set(boardwalkFp.x, 0.2, boardwalkFp.z);
     bw.receiveShadow = true;
     waterGroup.add(bw);
 
     // Ocean Pier extending south into the sea (x = 0, z = 81 to 115)
-    const pierGeo = new THREE.BoxGeometry(8, 0.4, 34);
+    const pierFp = getRectFootprint('pier');
+    const pierGeo = new THREE.BoxGeometry(pierFp.width, 0.4, pierFp.depth);
     const pier = new THREE.Mesh(pierGeo, materialLibrary.get('boardwalkWood'));
-    pier.position.set(0, 0.2, 98);
+    pier.position.set(pierFp.x, 0.2, pierFp.z);
     pier.receiveShadow = true;
     waterGroup.add(pier);
 

@@ -3,6 +3,17 @@ import { Maximize2, Minimize2, Eye, EyeOff, Compass } from 'lucide-react';
 import { CharacterId } from '../types/game';
 import { CHARACTERS } from '../data/characters';
 import { GameEngine } from '../engine/GameEngine';
+import {
+  CENTERLINE,
+  CROSSWALKS,
+  HOME_PLOTS,
+  LANDMARK_FOOTPRINTS,
+  MINIMAP,
+  ROADS,
+  SIDEWALKS,
+  TERRAIN,
+  toHexColor,
+} from '../world/worldData';
 
 interface MinimapProps {
   engine: GameEngine | null;
@@ -39,124 +50,87 @@ export const Minimap: React.FC<MinimapProps> = ({ engine, activeCharacterId }) =
       const w = canvas.width;
       const h = canvas.height;
 
-      // Coordinate mapping from 3D world to 2D canvas
-      // World range: X from -75 to 75 (span 150), Z from -115 to 105 (span 220)
-      const worldMinX = -80;
-      const worldMaxX = 80;
-      const worldMinZ = -115;
-      const worldMaxZ = 105;
+      // Coordinate mapping from 3D world to 2D canvas (bounds from worldData.MINIMAP)
+      const { worldMinX, worldMaxX, worldMinZ, worldMaxZ, colors } = MINIMAP;
 
       const toScreenX = (wx: number) => ((wx - worldMinX) / (worldMaxX - worldMinX)) * w;
       const toScreenY = (wz: number) => ((wz - worldMinZ) / (worldMaxZ - worldMinZ)) * h;
 
+      const fillWorldRect = (x: number, z: number, width: number, depth: number) => {
+        const left = toScreenX(x - width / 2);
+        const top = toScreenY(z - depth / 2);
+        ctx.fillRect(left, top, toScreenX(x + width / 2) - left, toScreenY(z + depth / 2) - top);
+      };
+
       // 1. Background Grass Terrain
-      ctx.fillStyle = '#1e3a1e';
+      ctx.fillStyle = colors.grass;
       ctx.fillRect(0, 0, w, h);
 
-      // 2. Ocean at South (Z: 85 to 105)
-      ctx.fillStyle = '#0284c7';
-      const oceanY = toScreenY(85);
-      ctx.fillRect(0, oceanY, w, h - oceanY);
+      // 2. Ocean (worldData.TERRAIN.ocean), then 3. Sandy Beach on top of it
+      ctx.fillStyle = colors.ocean;
+      fillWorldRect(TERRAIN.ocean.centerX, TERRAIN.ocean.centerZ, TERRAIN.ocean.width, TERRAIN.ocean.depth);
+      ctx.fillStyle = colors.sand;
+      fillWorldRect(TERRAIN.sand.centerX, TERRAIN.sand.centerZ, TERRAIN.sand.width, TERRAIN.sand.depth);
 
-      // 3. Sandy Beach (Z: 74 to 85)
-      ctx.fillStyle = '#d97706';
-      const sandY = toScreenY(74);
-      ctx.fillRect(0, sandY, w, oceanY - sandY);
+      // 4. Roads, sidewalks & zebra crossings (shared road-network data)
+      ctx.fillStyle = colors.asphalt;
+      ROADS.forEach((road) => {
+        const rectWidth = road.orientation === 'north_south' ? road.width : road.length;
+        const rectDepth = road.orientation === 'north_south' ? road.length : road.width;
+        fillWorldRect(road.centerX, road.centerZ, rectWidth, rectDepth);
+      });
 
-      // 4. Roads (Asphalt)
-      ctx.fillStyle = '#334155';
+      ctx.fillStyle = colors.sidewalk;
+      SIDEWALKS.forEach((sw) => fillWorldRect(sw.centerX, sw.centerZ, sw.width, sw.length));
 
-      // Main North-South Central Avenue (x: -8 to 8, z: -55 to 65)
-      const mainAveX = toScreenX(-8);
-      const mainAveW = toScreenX(8) - mainAveX;
-      const mainAveY = toScreenY(-55);
-      const mainAveH = toScreenY(65) - mainAveY;
-      ctx.fillRect(mainAveX, mainAveY, mainAveW, mainAveH);
+      ctx.fillStyle = colors.crosswalk;
+      CROSSWALKS.forEach((cw) => fillWorldRect(cw.x, cw.z, cw.width, cw.depth));
 
-      // School Avenue East-West (z = -55, x: -70 to 70)
-      const schRdY = toScreenY(-58);
-      const schRdH = toScreenY(-48) - schRdY;
-      ctx.fillRect(toScreenX(-70), schRdY, toScreenX(70) - toScreenX(-70), schRdH);
-
-      // Downtown Street East-West (z = 0, x: -70 to 70)
-      const dtRdY = toScreenY(-6);
-      const dtRdH = toScreenY(6) - dtRdY;
-      ctx.fillRect(toScreenX(-70), dtRdY, toScreenX(70) - toScreenX(-70), dtRdH);
-
-      // Coastal Drive East-West (z = 60, x: -70 to 70)
-      const coastRdY = toScreenY(55);
-      const coastRdH = toScreenY(65) - coastRdY;
-      ctx.fillRect(toScreenX(-70), coastRdY, toScreenX(70) - toScreenX(-70), coastRdH);
-
-      // Road dashed yellow centerlines
-      ctx.strokeStyle = '#facc15';
+      // Road dashed yellow centerline
+      ctx.strokeStyle = colors.centerline;
       ctx.lineWidth = 1;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
-      ctx.moveTo(toScreenX(0), toScreenY(-54));
-      ctx.lineTo(toScreenX(0), toScreenY(64));
+      ctx.moveTo(toScreenX(CENTERLINE.x), toScreenY(CENTERLINE.zFrom));
+      ctx.lineTo(toScreenX(CENTERLINE.x), toScreenY(CENTERLINE.zTo));
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // 5. Buildings & Landmarks
-      // School Main Building (Z: -108 to -64, X: -34 to 34)
-      ctx.fillStyle = '#991b1b';
-      const schX = toScreenX(-34);
-      const schY = toScreenY(-108);
-      const schW = toScreenX(34) - schX;
-      const schH = toScreenY(-64) - schY;
-      ctx.fillRect(schX, schY, schW, schH);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = isExpanded ? 'bold 11px sans-serif' : 'bold 8px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Northwood High', schX + schW / 2, schY + schH / 2);
-
-      // Football Pitch (East of School)
-      ctx.fillStyle = '#16a34a';
-      const fpX = toScreenX(38);
-      const fpY = toScreenY(-102);
-      ctx.fillRect(fpX, fpY, toScreenX(78) - fpX, toScreenY(-48) - fpY);
-      ctx.strokeStyle = '#ffffff';
-      ctx.strokeRect(fpX, fpY, toScreenX(78) - fpX, toScreenY(-48) - fpY);
-
-      // Homes row (Z: -44 to -36)
-      const homeXCoords = [-38, -26, -14, -5, 10, 25, 40];
-      homeXCoords.forEach((hx) => {
-        ctx.fillStyle = '#2563eb';
-        const hxScreen = toScreenX(hx - 3.5);
-        const hyScreen = toScreenY(-44);
-        ctx.fillRect(hxScreen, hyScreen, toScreenX(hx + 3.5) - hxScreen, toScreenY(-36) - hyScreen);
+      // 5. Buildings & Landmarks (shared footprints from worldData)
+      LANDMARK_FOOTPRINTS.forEach((f) => {
+        ctx.fillStyle = f.color;
+        if (f.shape === 'rect') {
+          fillWorldRect(f.x, f.z, f.width, f.depth);
+        } else {
+          const rx = toScreenX(f.x + f.radius) - toScreenX(f.x);
+          const ry = toScreenY(f.z + f.radius) - toScreenY(f.z);
+          ctx.beginPath();
+          ctx.ellipse(toScreenX(f.x), toScreenY(f.z), rx, ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (f.label) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = isExpanded ? 'bold 11px sans-serif' : 'bold 8px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(f.label, toScreenX(f.x), toScreenY(f.z));
+        }
       });
 
-      // Central Plaza & Fountain (0, 0)
-      ctx.fillStyle = '#06b6d4';
-      ctx.beginPath();
-      ctx.arc(toScreenX(0), toScreenY(0), isExpanded ? 8 : 4, 0, Math.PI * 2);
-      ctx.fill();
+      // Football pitch outline (keeps the pitch readable at small sizes)
+      const pitch = LANDMARK_FOOTPRINTS.find((f) => f.id === 'football_pitch');
+      if (pitch && pitch.shape === 'rect') {
+        const l = toScreenX(pitch.x - pitch.width / 2);
+        const t = toScreenY(pitch.z - pitch.depth / 2);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(l, t, toScreenX(pitch.x + pitch.width / 2) - l, toScreenY(pitch.z + pitch.depth / 2) - t);
+      }
 
-      // The Central Bean Cafe (X: -22, Z: 15)
-      ctx.fillStyle = '#b45309';
-      const cafeX = toScreenX(-29);
-      const cafeY = toScreenY(8);
-      ctx.fillRect(cafeX, cafeY, toScreenX(-15) - cafeX, toScreenY(20) - cafeY);
-
-      // Galaxy Mall (X: 25, Z: -18)
-      ctx.fillStyle = '#831843';
-      const mallX = toScreenX(14);
-      const mallY = toScreenY(-28);
-      ctx.fillRect(mallX, mallY, toScreenX(36) - mallX, toScreenY(-8) - mallY);
-
-      // Pixel Pulse Arcade (X: 28, Z: 22)
-      ctx.fillStyle = '#4338ca';
-      const arcX = toScreenX(20);
-      const arcY = toScreenY(15);
-      ctx.fillRect(arcX, arcY, toScreenX(36) - arcX, toScreenY(29) - arcY);
-
-      // Park (X: -30, Z: -10)
-      ctx.fillStyle = '#15803d';
-      const prkX = toScreenX(-46);
-      const prkY = toScreenY(-24);
-      ctx.fillRect(prkX, prkY, toScreenX(-14) - prkX, toScreenY(4) - prkY);
+      // Home plots, each in its owner's house accent color (shared data)
+      HOME_PLOTS.forEach((home) => {
+        ctx.fillStyle = toHexColor(home.color);
+        fillWorldRect(home.x, home.z, home.width, home.depth);
+      });
 
       // 6. Draw Vehicles (Yellow/Silver moving dots)
       if (engine.trafficSystem) {

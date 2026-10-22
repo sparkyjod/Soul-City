@@ -46,6 +46,8 @@ export default function App() {
 
     const engine = new GameEngine(canvasMountRef.current, activeCharId);
     engineRef.current = engine;
+    // TEMP verification hook (removed after the browser check)
+    (window as unknown as { __soulCityEngine?: GameEngine }).__soulCityEngine = engine;
 
     engine.onNearbyTargetChange = (target) => {
       setNearbyTarget(target);

@@ -1,3 +1,5 @@
+import { PEDESTRIAN_NETWORK } from './worldData';
+
 export interface NavNode {
   id: string;
   x: number;
@@ -12,90 +14,19 @@ export class NavigationNetwork {
     this.buildGraph();
   }
 
-  private addNode(id: string, x: number, z: number, neighbors: string[]) {
-    this.nodes.set(id, { id, x, z, neighbors });
-  }
-
   private buildGraph() {
-    // 1. Residential District Sidewalks & House Entrances
-    this.addNode('home_ani_front', -38, -48, ['res_avenue_west', 'res_ani_door']);
-    this.addNode('res_ani_door', -38, -38, ['home_ani_front']);
-
-    this.addNode('home_vaishu_front', -26, -48, ['res_avenue_west', 'res_vaishu_door']);
-    this.addNode('res_vaishu_door', -26, -38, ['home_vaishu_front']);
-
-    this.addNode('home_chirag_front', -14, -48, ['res_avenue_west', 'school_avenue_center', 'res_chirag_door']);
-    this.addNode('res_chirag_door', -14, -38, ['home_chirag_front']);
-
-    this.addNode('home_shreya_front', -5, -48, ['school_avenue_center', 'res_shreya_door']);
-    this.addNode('res_shreya_door', -5, -38, ['home_shreya_front']);
-
-    this.addNode('home_zan_front', 10, -48, ['school_avenue_center', 'res_avenue_east', 'res_zan_door']);
-    this.addNode('res_zan_door', 10, -38, ['home_zan_front']);
-
-    this.addNode('home_shagun_front', 25, -48, ['res_avenue_east', 'res_shagun_door']);
-    this.addNode('res_shagun_door', 25, -38, ['home_shagun_front']);
-
-    this.addNode('home_jatin_front', 40, -48, ['res_avenue_east', 'res_jatin_door']);
-    this.addNode('res_jatin_door', 40, -38, ['home_jatin_front']);
-
-    this.addNode('res_avenue_west', -30, -52, ['home_ani_front', 'home_vaishu_front', 'home_chirag_front', 'school_avenue_center']);
-    this.addNode('res_avenue_east', 25, -52, ['home_zan_front', 'home_shagun_front', 'home_jatin_front', 'school_avenue_center']);
-
-    // 2. School Entrance & Interior Corridors
-    this.addNode('school_avenue_center', 0, -52, ['main_avenue_north', 'school_gate', 'res_avenue_west', 'res_avenue_east']);
-    this.addNode('school_gate', 0, -60, ['school_avenue_center', 'school_lobby']);
-    this.addNode('school_lobby', 0, -68, ['school_gate', 'school_corridor_center']);
-
-    this.addNode('school_corridor_center', 0, -78, ['school_lobby', 'school_class_a', 'school_corridor_east', 'school_corridor_west']);
-    this.addNode('school_class_a', 0, -85, ['school_corridor_center']);
-
-    this.addNode('school_corridor_west', -12, -78, ['school_corridor_center', 'school_library', 'school_class_b']);
-    this.addNode('school_library', -20, -85, ['school_corridor_west']);
-    this.addNode('school_class_b', -2, -95, ['school_corridor_west']);
-
-    this.addNode('school_corridor_east', 14, -78, ['school_corridor_center', 'school_canteen', 'school_sports_exit']);
-    this.addNode('school_canteen', 20, -85, ['school_corridor_east']);
-    this.addNode('school_sports_exit', 32, -78, ['school_corridor_east', 'sports_pitch']);
-    this.addNode('sports_pitch', 55, -75, ['school_sports_exit']);
-
-    // 3. Central Avenue Sidewalk Network (North-South)
-    this.addNode('main_avenue_north', 0, -45, ['school_avenue_center', 'avenue_sw_west_n', 'avenue_sw_east_n']);
-    this.addNode('avenue_sw_west_n', -10, -30, ['main_avenue_north', 'avenue_sw_west_mid']);
-    this.addNode('avenue_sw_east_n', 10, -30, ['main_avenue_north', 'avenue_sw_east_mid']);
-
-    this.addNode('avenue_sw_west_mid', -10, 0, ['avenue_sw_west_n', 'downtown_plaza_west', 'avenue_sw_west_s']);
-    this.addNode('avenue_sw_east_mid', 10, 0, ['avenue_sw_east_n', 'downtown_plaza_east', 'avenue_sw_east_s']);
-
-    // 4. Downtown Plaza, Mall, Cafe & Park
-    this.addNode('downtown_plaza_center', 0, 0, ['downtown_plaza_west', 'downtown_plaza_east', 'avenue_sw_west_mid', 'avenue_sw_east_mid']);
-    this.addNode('downtown_plaza_west', -15, 0, ['downtown_plaza_center', 'cafe_entrance', 'park_path_main']);
-    this.addNode('downtown_plaza_east', 15, 0, ['downtown_plaza_center', 'mall_entrance', 'arcade_path']);
-
-    this.addNode('cafe_entrance', -18, 14, ['downtown_plaza_west', 'cafe_interior']);
-    this.addNode('cafe_interior', -22, 16, ['cafe_entrance']);
-
-    this.addNode('park_path_main', -25, -10, ['downtown_plaza_west', 'park_gazebo']);
-    this.addNode('park_gazebo', -32, -10, ['park_path_main']);
-
-    this.addNode('mall_entrance', 22, -8, ['downtown_plaza_east', 'mall_interior']);
-    this.addNode('mall_interior', 25, -18, ['mall_entrance']);
-
-    this.addNode('arcade_path', 22, 16, ['downtown_plaza_east', 'arcade_interior']);
-    this.addNode('arcade_interior', 28, 22, ['arcade_path']);
-
-    // 5. Southern Avenue Sidewalks & Beach Waterfront
-    this.addNode('avenue_sw_west_s', -10, 35, ['avenue_sw_west_mid', 'coastal_west']);
-    this.addNode('avenue_sw_east_s', 10, 35, ['avenue_sw_east_mid', 'coastal_east']);
-
-    this.addNode('coastal_center', 0, 60, ['avenue_sw_west_s', 'avenue_sw_east_s', 'coastal_west', 'coastal_east', 'beach_boardwalk_mid']);
-    this.addNode('coastal_west', -25, 60, ['coastal_center', 'avenue_sw_west_s', 'beach_boardwalk_west']);
-    this.addNode('coastal_east', 25, 60, ['coastal_center', 'avenue_sw_east_s', 'beach_boardwalk_east']);
-
-    this.addNode('beach_boardwalk_mid', 0, 75, ['coastal_center', 'beach_pier', 'beach_boardwalk_west', 'beach_boardwalk_east']);
-    this.addNode('beach_boardwalk_west', -25, 75, ['beach_boardwalk_mid', 'coastal_west']);
-    this.addNode('beach_boardwalk_east', 25, 75, ['beach_boardwalk_mid', 'coastal_east']);
-    this.addNode('beach_pier', 0, 95, ['beach_boardwalk_mid']);
+    // Node data lives in worldData.PEDESTRIAN_NETWORK (single source of truth,
+    // shared with the city builder and minimap). Coordinates and neighbour
+    // lists are identical to the original hand-authored graph; only the
+    // storage location changed.
+    for (const node of PEDESTRIAN_NETWORK.nodes) {
+      this.nodes.set(node.id, {
+        id: node.id,
+        x: node.x,
+        z: node.z,
+        neighbors: [...node.neighbors],
+      });
+    }
   }
 
   public findNearestNode(x: number, z: number): NavNode {
@@ -166,6 +97,75 @@ export class NavigationNetwork {
 
     pathPoints.push({ x: targetX, z: targetZ });
     return pathPoints;
+  }
+}
+
+/**
+ * Pure waypoint follower used for NPC schedule travel (Stage 2).
+ * Deliberately Three.js-free so it can be unit-tested headlessly.
+ * GameEngine applies each returned step to an NPC root with collision checks.
+ */
+export interface RouteStep {
+  /** Position after this step (clamped so waypoints are never overshoot). */
+  x: number;
+  z: number;
+  /** Unit travel direction for facing/animation (zero when finished). */
+  dirX: number;
+  dirZ: number;
+}
+
+export class RouteFollower {
+  private index = 0;
+
+  constructor(
+    public readonly waypoints: { x: number; z: number }[],
+    /** Waypoints within this distance count as reached. */
+    public readonly arriveThreshold: number = 0.5
+  ) {}
+
+  public get done(): boolean {
+    return this.index >= this.waypoints.length;
+  }
+
+  public get progressIndex(): number {
+    return this.index;
+  }
+
+  /** Waypoint currently being walked towards (null once finished). */
+  public get currentWaypoint(): { x: number; z: number } | null {
+    return this.done ? null : this.waypoints[this.index];
+  }
+
+  /** Advance along the route by at most `stepDist` world units. */
+  public advance(x: number, z: number, stepDist: number): RouteStep {
+    // Skip any waypoints already within the arrival threshold.
+    while (!this.done) {
+      const wp = this.waypoints[this.index];
+      if (Math.hypot(wp.x - x, wp.z - z) > this.arriveThreshold) break;
+      this.index++;
+    }
+
+    if (this.done) {
+      return { x, z, dirX: 0, dirZ: 0 };
+    }
+
+    const wp = this.waypoints[this.index];
+    const dx = wp.x - x;
+    const dz = wp.z - z;
+    const dist = Math.hypot(dx, dz);
+    const dirX = dx / dist;
+    const dirZ = dz / dist;
+
+    // Clamp so we land exactly on the waypoint instead of overshooting it.
+    const move = Math.min(stepDist, dist);
+    const nx = x + dirX * move;
+    const nz = z + dirZ * move;
+
+    if (move >= dist - this.arriveThreshold) {
+      this.index++;
+    }
+
+    return { x: nx, z: nz, dirX, dirZ };
   }
 }
 

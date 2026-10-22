@@ -6,6 +6,8 @@ import { LOCATION_SPOTS } from '../data/locations';
 import { CityBuilder } from '../world/cityBuilder';
 import { CharacterBuilder, CharacterMeshHandle } from '../world/characterBuilder';
 import { TrafficSystem } from '../world/trafficSystem';
+import { RouteFollower, navigationNetwork } from '../world/navigationNetwork';
+import { findClearSpot, moveToward, moveWithSlide } from '../world/movement';
 import { soundSystem } from '../audio/soundSystem';
 
 export interface InteractionTarget {
@@ -16,6 +18,21 @@ export interface InteractionTarget {
   spotName?: string;
   activities?: string[];
   distance: number;
+}
+
+/** Live route-following state for one NPC friend. */
+interface NpcRouteState {
+  follower: RouteFollower;
+  /** Watchdog: seconds without getting closer to the current waypoint. */
+  stallTimer: number;
+  /** Closest distance reached for the waypoint currently being walked to. */
+  bestDist: number;
+  /** Waypoint index `bestDist` refers to. */
+  waypointIndex: number;
+  /** Committed side while rounding an obstacle: +1 / -1 / 0 (free). */
+  avoidSide: number;
+  /** Seconds committed to that side; flips if it stops paying off. */
+  sideAge: number;
 }
 
 export interface NavWaypoint {
@@ -37,6 +54,16 @@ export class GameEngine {
   public characters: Map<CharacterId, CharacterMeshHandle> = new Map();
   public activePlayerId: CharacterId = 'anirudh';
   public onActiveCharacterChange?: (newId: CharacterId) => void;
+
+  // NPC schedule travel (Stage 2): friends physically walk their routines.
+  private npcRoutes: Map<CharacterId, NpcRouteState> = new Map();
+  private scheduleQueue: CharacterId[] = [];
+  /** Seconds until a stalled NPC is allowed to re-plan its route. */
+  private routeRetryTimers: Map<CharacterId, number> = new Map();
+  private static readonly NPC_WALK_SPEED = 4.0;
+  private static readonly NPC_STALL_TIMEOUT = 3.0;
+  private static readonly NPC_RETRY_DELAY = 1.5;
+  private static readonly BODY_RADIUS = 0.45;
 
   // Camera settings
   public cameraOffset = new THREE.Vector3(14, 18, 14);
@@ -160,6 +187,9 @@ export class GameEngine {
     // 7. Spawn all 7 characters
     this.spawnCharacters();
 
+    // 7b. Queue initial schedule routing so friends head to their current routine
+    this.queueAllScheduleUpdates();
+
     // 8. Input listeners
     this.setupInputs();
 
@@ -259,7 +289,17 @@ export class GameEngine {
 
   public switchCharacter(newId: CharacterId) {
     if (!this.characters.has(newId)) return;
+    const previousId = this.activePlayerId;
     this.activePlayerId = newId;
+
+    // The newly-controlled character is player-driven from now on.
+    this.npcRoutes.delete(newId);
+    this.routeRetryTimers.delete(newId);
+    // The previous character becomes NPC-driven again and resumes their routine.
+    if (previousId !== newId) {
+      this.scheduleQueue.push(previousId);
+    }
+
     soundSystem.playClick();
   }
 
@@ -397,16 +437,19 @@ export class GameEngine {
 
     if (isMoving) {
       const speed = (this.isRunning ? 8.5 : 4.5) * delta;
-      const targetX = player.root.position.x + worldDirX * speed;
-      const targetZ = player.root.position.z + worldDirZ * speed;
 
-      // Spatial collision checks
-      if (!this.cityBuilder.checkCollision(targetX, player.root.position.z)) {
-        player.root.position.x = targetX;
-      }
-      if (!this.cityBuilder.checkCollision(player.root.position.x, targetZ)) {
-        player.root.position.z = targetZ;
-      }
+      // Collision-aware step (slides along walls and can escape furniture).
+      const walked = moveWithSlide(
+        player.root.position.x,
+        player.root.position.z,
+        worldDirX,
+        worldDirZ,
+        speed,
+        GameEngine.BODY_RADIUS,
+        (x, z, r) => this.cityBuilder.checkCollision(x, z, r)
+      );
+      player.root.position.x = walked.x;
+      player.root.position.z = walked.z;
 
       const targetAngle = Math.atan2(worldDirX, worldDirZ);
       player.root.rotation.y = THREE.MathUtils.lerp(player.root.rotation.y, targetAngle, 0.2);
@@ -439,6 +482,189 @@ export class GameEngine {
     }
   }
 
+  // --- NPC SCHEDULE TRAVEL (Stage 2) ---
+  /** Queue every non-player friend for (re)routing to their current routine. */
+  private queueAllScheduleUpdates() {
+    this.routeRetryTimers.clear();
+    this.scheduleQueue = CHARACTER_LIST.map((p) => p.id).filter((id) => id !== this.activePlayerId);
+  }
+
+  /** Compute a graph path from an NPC's position to their routine destination. */
+  private routeCharacterToRoutine(charId: CharacterId) {
+    const npc = this.characters.get(charId);
+    const routine = this.getCharacterCurrentRoutine(charId);
+    if (!npc || !routine) return;
+
+    const targetX = routine.targetPos[0];
+    const targetZ = routine.targetPos[2];
+    // Lift the body out of furniture it may be standing in (e.g. a chair or a
+    // doorway it was nudged into) before planning a path from that spot.
+    const clearSpot = findClearSpot(
+      npc.root.position.x,
+      npc.root.position.z,
+      GameEngine.BODY_RADIUS,
+      (x, z, r) => this.cityBuilder.checkCollision(x, z, r)
+    );
+    if (clearSpot) {
+      npc.root.position.x = clearSpot.x;
+      npc.root.position.z = clearSpot.z;
+    }
+
+    const dist = Math.hypot(targetX - npc.root.position.x, targetZ - npc.root.position.z);
+
+    if (dist < 1.6) {
+      // Already at the destination — no route needed.
+      this.npcRoutes.delete(charId);
+      return;
+    }
+
+    const path = navigationNetwork.findPath(
+      npc.root.position.x,
+      npc.root.position.z,
+      targetX,
+      targetZ
+    );
+
+    this.npcRoutes.set(charId, {
+      follower: new RouteFollower(path),
+      stallTimer: 0,
+      bestDist: Infinity,
+      waypointIndex: -1,
+      avoidSide: 0,
+      sideAge: 0,
+    });
+  }
+
+  /**
+   * Advance NPC route-following. Pathfinding is event-driven (hour changes and
+   * character switches only, staggered across frames) — never per-frame BFS.
+   */
+  private updateNPCMovement(delta: number) {
+    // Re-queue friends whose route stalled, once their retry delay elapsed.
+    if (this.routeRetryTimers.size > 0) {
+      this.routeRetryTimers.forEach((timeLeft, charId) => {
+        const remaining = timeLeft - delta;
+        if (remaining > 0) {
+          this.routeRetryTimers.set(charId, remaining);
+        } else {
+          this.routeRetryTimers.delete(charId);
+          if (charId !== this.activePlayerId && !this.scheduleQueue.includes(charId)) {
+            this.scheduleQueue.push(charId);
+          }
+        }
+      });
+    }
+
+    // Staggered routing: at most one path computation every few frames.
+    if (this.scheduleQueue.length > 0 && this.frameCount % 3 === 0) {
+      const charId = this.scheduleQueue.shift()!;
+      if (charId !== this.activePlayerId) {
+        this.routeCharacterToRoutine(charId);
+      }
+    }
+
+    this.npcRoutes.forEach((state, charId) => {
+      if (charId === this.activePlayerId) return; // player takes over
+      const npc = this.characters.get(charId);
+      if (!npc) {
+        this.npcRoutes.delete(charId);
+        return;
+      }
+
+      const stepDist = GameEngine.NPC_WALK_SPEED * delta;
+      const step = state.follower.advance(npc.root.position.x, npc.root.position.z, stepDist);
+
+      if (state.follower.done) {
+        this.npcRoutes.delete(charId);
+        this.routeRetryTimers.delete(charId);
+        return;
+      }
+
+      // Collision-aware step: rounds furniture instead of jamming on it.
+      const waypoint = state.follower.currentWaypoint;
+      const walked = waypoint
+        ? moveToward(
+            npc.root.position.x,
+            npc.root.position.z,
+            waypoint.x,
+            waypoint.z,
+            stepDist,
+            GameEngine.BODY_RADIUS,
+            (x, z, r) => this.cityBuilder.checkCollision(x, z, r),
+            state.avoidSide
+          )
+        : moveWithSlide(
+            npc.root.position.x,
+            npc.root.position.z,
+            step.dirX,
+            step.dirZ,
+            stepDist,
+            GameEngine.BODY_RADIUS,
+            (x, z, r) => this.cityBuilder.checkCollision(x, z, r)
+          );
+      npc.root.position.x = walked.x;
+      npc.root.position.z = walked.z;
+
+      // Remember which way we went round the obstruction so the next frame
+      // commits to the same side instead of dithering in front of it.
+      if (walked.deviation !== 0) {
+        state.avoidSide = Math.sign(walked.deviation);
+      } else if (walked.moved) {
+        state.avoidSide = 0;
+        state.sideAge = 0;
+      }
+
+      // Face travel direction and show the walking animation.
+      const targetAngle = Math.atan2(step.dirX, step.dirZ);
+      npc.root.rotation.y = THREE.MathUtils.lerp(npc.root.rotation.y, targetAngle, 0.15);
+      npc.setAnimation('walking');
+
+      // Stall watchdog measures progress towards the waypoint (not raw
+      // movement, so an NPC shuffling side to side still counts as stuck).
+      if (!waypoint) return;
+      if (state.waypointIndex !== state.follower.progressIndex) {
+        state.waypointIndex = state.follower.progressIndex;
+        state.bestDist = Infinity;
+        state.stallTimer = 0;
+      }
+      const distToWaypoint = Math.hypot(
+        waypoint.x - npc.root.position.x,
+        waypoint.z - npc.root.position.z
+      );
+      if (distToWaypoint < state.bestDist - 0.02) {
+        state.bestDist = distToWaypoint;
+        state.stallTimer = 0;
+        state.sideAge = 0;
+      } else {
+        state.stallTimer += delta;
+        state.sideAge += delta;
+        // This side of the obstacle is not working: try the other one.
+        if (state.sideAge > 0.6) {
+          state.avoidSide = state.avoidSide === 1 ? -1 : 1;
+          state.sideAge = 0;
+        }
+        if (state.stallTimer > GameEngine.NPC_STALL_TIMEOUT) {
+          // Wedged: drop the route, lift the body out of the obstruction and
+          // re-plan shortly instead of standing there for the rest of the hour.
+          this.npcRoutes.delete(charId);
+          const clearSpot = findClearSpot(
+            npc.root.position.x,
+            npc.root.position.z,
+            GameEngine.BODY_RADIUS,
+            (x, z, r) => this.cityBuilder.checkCollision(x, z, r)
+          );
+          if (clearSpot) {
+            npc.root.position.x = clearSpot.x;
+            npc.root.position.z = clearSpot.z;
+          }
+          if (!this.routeRetryTimers.has(charId)) {
+            this.routeRetryTimers.set(charId, GameEngine.NPC_RETRY_DELAY);
+          }
+        }
+      }
+    });
+  }
+
   /**
    * Lightweight ambient NPC updates:
    * Keep world populated with natural animations (studying, eating, talking, idle)
@@ -447,6 +673,7 @@ export class GameEngine {
   private updateAutonomousNPCs(_delta: number) {
     this.characters.forEach((npc, charId) => {
       if (charId === this.activePlayerId) return;
+      if (this.npcRoutes.has(charId)) return; // en route: movement loop drives animation
 
       const routine = this.getCharacterCurrentRoutine(charId);
       if (!routine) return;
@@ -480,6 +707,9 @@ export class GameEngine {
           this.clock.hour = 0;
           this.clock.dayCount += 1;
         }
+
+        // Hour changed: every friend re-routes to their new routine destination.
+        this.queueAllScheduleUpdates();
       }
       this.onTimeChange?.(this.clock);
       this.updateDayNightCycle();
@@ -604,7 +834,8 @@ export class GameEngine {
     // 2. Player movement & navigation
     this.updatePlayer(delta);
 
-    // 3. Autonomous NPC routines & waypoint following
+    // 3. NPC schedule travel (staggered routing) & routine animations
+    this.updateNPCMovement(delta);
     this.updateAutonomousNPCs(delta);
 
     // 4. Distance-based LOD animation processing for smooth 60fps
