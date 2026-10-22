@@ -8,6 +8,11 @@ import { CharacterBuilder, CharacterMeshHandle } from '../world/characterBuilder
 import { TrafficSystem } from '../world/trafficSystem';
 import { RouteFollower, navigationNetwork } from '../world/navigationNetwork';
 import { findClearSpot, moveToward, moveWithSlide } from '../world/movement';
+import {
+  walkStateFor,
+  zoneAt,
+  zonesOnSegment,
+} from '../world/pedestrianCrossings';
 import { soundSystem } from '../audio/soundSystem';
 
 export interface InteractionTarget {
@@ -33,6 +38,8 @@ interface NpcRouteState {
   avoidSide: number;
   /** Seconds committed to that side; flips if it stops paying off. */
   sideAge: number;
+  /** Held at a kerb waiting for the walk signal (Stage 4). */
+  waitingForCrossing: boolean;
 }
 
 export interface NavWaypoint {
@@ -518,12 +525,22 @@ export class GameEngine {
       return;
     }
 
-    const path = navigationNetwork.findPath(
+    const path = navigationNetwork.findPathOrNull(
       npc.root.position.x,
       npc.root.position.z,
       targetX,
       targetZ
     );
+
+    if (!path) {
+      // Genuinely unreachable: stay where we are and try again shortly. No
+      // straight-line shortcut, no teleport to the destination.
+      this.npcRoutes.delete(charId);
+      if (!this.routeRetryTimers.has(charId)) {
+        this.routeRetryTimers.set(charId, GameEngine.NPC_RETRY_DELAY);
+      }
+      return;
+    }
 
     this.npcRoutes.set(charId, {
       follower: new RouteFollower(path),
@@ -532,7 +549,43 @@ export class GameEngine {
       waypointIndex: -1,
       avoidSide: 0,
       sideAge: 0,
+      waitingForCrossing: false,
     });
+  }
+
+  /**
+   * The crossing an NPC is about to step onto, if any. Empty once the walker is
+   * already inside a zebra: having started, they always finish the crossing
+   * rather than being stranded in the middle of the road by a phase change.
+   */
+  private crossingAhead(
+    x: number,
+    z: number,
+    waypoint: { x: number; z: number } | null
+  ): ReturnType<typeof zoneAt> {
+    if (!waypoint) return null;
+    if (zoneAt(x, z, 0)) return null;
+
+    const dx = waypoint.x - x;
+    const dz = waypoint.z - z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < 1e-6) return null;
+
+    // Look one step ahead: far enough to stop at the kerb, short enough that an
+    // NPC walking parallel to a zebra is not held for no reason.
+    const look = Math.min(dist, 1.1);
+    const zones = zonesOnSegment({ x, z }, { x: x + (dx / dist) * look, z: z + (dz / dist) * look });
+    return zones[0] ?? null;
+  }
+
+  /** Walker positions handed to the traffic simulation for right-of-way. */
+  public getPedestrianPositions(): { x: number; z: number }[] {
+    const positions: { x: number; z: number }[] = [];
+    this.characters.forEach((character, charId) => {
+      if (charId === this.activePlayerId) return;
+      positions.push({ x: character.root.position.x, z: character.root.position.z });
+    });
+    return positions;
   }
 
   /**
@@ -570,6 +623,30 @@ export class GameEngine {
         this.npcRoutes.delete(charId);
         return;
       }
+
+      // Right of way (Stage 4): stop at the kerb until the walk signal is green.
+      const zone = this.crossingAhead(
+        npc.root.position.x,
+        npc.root.position.z,
+        state.follower.currentWaypoint
+      );
+      if (
+        zone &&
+        walkStateFor(
+          zone,
+          this.trafficSystem.simulation.signals,
+          this.trafficSystem.simulation.time
+        ) === 'wait'
+      ) {
+        state.waitingForCrossing = true;
+        // Waiting is not being stuck: reset the watchdog so the route is kept.
+        state.stallTimer = 0;
+        state.bestDist = Infinity;
+        state.sideAge = 0;
+        npc.setAnimation('idle');
+        return;
+      }
+      state.waitingForCrossing = false;
 
       const stepDist = GameEngine.NPC_WALK_SPEED * delta;
       const step = state.follower.advance(npc.root.position.x, npc.root.position.z, stepDist);
@@ -856,8 +933,8 @@ export class GameEngine {
       }
     });
 
-    // 5. Update intelligent traffic (lane following, safety barriers, anti-overlap)
-    this.trafficSystem.update(delta, playerPos);
+    // 5. Update intelligent traffic (lane following, signals, pedestrian yield)
+    this.trafficSystem.update(delta, playerPos, this.getPedestrianPositions());
 
     // 6. Update environment water
     this.cityBuilder.updateEnvironment(delta);

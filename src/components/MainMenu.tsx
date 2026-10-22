@@ -43,8 +43,11 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             Social Life Simulation
           </span>
         </div>
-        <h1 className="text-5xl font-black tracking-tight text-white sm:text-6xl drop-shadow-md">
-          FRIEND<span className="text-indigo-500">VERSE</span>
+        <h1
+          className="text-5xl font-black tracking-tight text-white sm:text-6xl drop-shadow-md"
+          aria-label="SoulSociety"
+        >
+          SOUL<span className="text-indigo-500">SOCIETY</span>
         </h1>
         <p className="text-sm font-medium text-slate-300 italic">
           &ldquo;Your world. Your people. Your story.&rdquo;
@@ -183,7 +186,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
       {/* FOOTER INFO */}
       <div className="flex items-center justify-between text-xs text-slate-400">
-        <div>3D Living World • 7 Friends • Autonomous NPC Schedules • Hinglish Banter</div>
+        <div>SoulSociety • 3D Living World • 7 Friends • Autonomous NPC Schedules • Hinglish Banter</div>
         <div>WASD Walk • Shift Run • Q/E Camera • 1–7 Switch Friend • M Map • R Bonds</div>
       </div>
     </div>

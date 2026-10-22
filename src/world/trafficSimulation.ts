@@ -22,6 +22,12 @@ import {
   type TurnMovement,
 } from './roadNetwork';
 import { SignalController, type SignalColor } from './trafficSignals';
+import {
+  CROSSING_CLEARANCE,
+  PEDESTRIAN_RADIUS,
+  occupiedZoneIds,
+  zonesForMovementPath,
+} from './pedestrianCrossings';
 
 export const CAR_LENGTH = 4.2;
 export const CAR_WIDTH = 2.0;
@@ -81,6 +87,9 @@ export class TrafficSimulation {
   public time = 0;
   /** Completed junction crossings, surfaced for tests. */
   public completedCrossings = 0;
+
+  /** Walkers the cars must not drive through (set by the engine each frame). */
+  public pedestrians: Point[] = [];
 
   constructor(options: SimulationOptions = {}) {
     this.time = options.time ?? 0;
@@ -174,6 +183,22 @@ export class TrafficSimulation {
     });
   }
 
+  /**
+   * Is a walker standing on (or right next to) a crossing that this turn path
+   * sweeps through? Cars must not enter the junction until it clears.
+   */
+  private crossingClear(movement: TurnMovement): boolean {
+    if (this.pedestrians.length === 0) return true;
+    const zones = zonesForMovementPath(movement.id, movement.path);
+    if (zones.length === 0) return true;
+
+    const occupied = occupiedZoneIds(
+      this.pedestrians,
+      PEDESTRIAN_RADIUS + CROSSING_CLEARANCE
+    );
+    return zones.every((zone) => !occupied.has(zone.id));
+  }
+
   /** Can this vehicle start crossing the junction right now? */
   private canEnterMovement(vehicle: Vehicle, movement: TurnMovement): boolean {
     const clearance = CAR_LENGTH + SAFE_GAP;
@@ -184,8 +209,44 @@ export class TrafficSimulation {
       if (other.movementId === movement.id && other.movementS < clearance) return false;
     }
 
+    // Right of way: a walker on the zebra has priority over any turn.
+    if (!this.crossingClear(movement)) return false;
+
     // Never drive into a queue that backs up into the junction.
     return this.laneAheadClear(movement.toLaneId, vehicle.id);
+  }
+
+  /**
+   * Nearest walker directly in the car's path, in metres ahead of its nose.
+   * Covers jaywalkers, shared-space plaza crossings and anyone who steps onto
+   * a zebra while the car is already committed.
+   */
+  private pedestrianAhead(vehicle: Vehicle): number {
+    if (this.pedestrians.length === 0) return Infinity;
+    const sin = Math.sin(vehicle.heading);
+    const cos = Math.cos(vehicle.heading);
+    const halfLane = CAR_WIDTH / 2 + PEDESTRIAN_RADIUS + 0.25;
+    let nearest = Infinity;
+
+    for (const ped of this.pedestrians) {
+      const dx = ped.x - vehicle.x;
+      const dz = ped.z - vehicle.z;
+      const forward = dx * sin + dz * cos;
+      const lateral = dx * cos - dz * sin;
+      if (forward < -CAR_LENGTH / 2) continue;
+      if (forward > 14) continue;
+      if (Math.abs(lateral) > halfLane) continue;
+      nearest = Math.min(nearest, Math.max(forward - CAR_LENGTH / 2, 0));
+    }
+    return nearest;
+  }
+
+  /** Speed allowed by a walker in the path: stop close, creep when further. */
+  private pedestrianSpeedCap(vehicle: Vehicle): number {
+    const gap = this.pedestrianAhead(vehicle);
+    if (gap === Infinity) return Infinity;
+    if (gap < 2.5) return 0;
+    return Math.min(vehicle.baseSpeed, (gap - 2.5) * 1.6);
   }
 
   /** The vehicle directly ahead in the same lane, if any. */
@@ -213,8 +274,9 @@ export class TrafficSimulation {
     return 2.2;
   }
 
-  public update(dt: number, player?: Point): void {
+  public update(dt: number, player?: Point, pedestrians?: Point[]): void {
     this.time += dt;
+    if (pedestrians) this.pedestrians = pedestrians;
 
     for (const vehicle of this.vehicles) {
       if (vehicle.state === 'lane') this.updateOnLane(vehicle, dt, player);
@@ -268,8 +330,9 @@ export class TrafficSimulation {
       }
     }
 
-    // 4. Do not run over the player.
+    // 4. Never run over the player or a walker in the lane ahead.
     targetSpeed = Math.min(targetSpeed, this.playerSpeedCap(vehicle, player));
+    targetSpeed = Math.min(targetSpeed, this.pedestrianSpeedCap(vehicle));
 
     // 5. Integrate speed and position.
     const stopping = targetSpeed < vehicle.speed;
@@ -313,6 +376,7 @@ export class TrafficSimulation {
       targetSpeed = Math.max(0, remaining - 1) * 1.5;
     }
     targetSpeed = Math.min(targetSpeed, this.playerSpeedCap(vehicle, player));
+    targetSpeed = Math.min(targetSpeed, this.pedestrianSpeedCap(vehicle));
 
     const stopping = targetSpeed < vehicle.speed;
     const rate = stopping ? BRAKE : ACCEL;

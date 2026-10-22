@@ -44,9 +44,20 @@ export class NavigationNetwork {
   }
 
   /**
-   * Breadth-First Search (BFS) shortest path on the waypoint graph
+   * Breadth-First Search (BFS) shortest path on the waypoint graph.
+   *
+   * Returns `null` when the destination is genuinely unreachable instead of
+   * inventing a straight line through the city: callers that move a body (NPC
+   * scheduling) treat that as "stay put and try again later" rather than
+   * teleporting or walking through walls. `findPath` keeps the old, never-null
+   * shape for read-only callers and tests.
    */
-  public findPath(startX: number, startZ: number, targetX: number, targetZ: number): { x: number; z: number }[] {
+  public findPathOrNull(
+    startX: number,
+    startZ: number,
+    targetX: number,
+    targetZ: number
+  ): { x: number; z: number }[] | null {
     const startNode = this.findNearestNode(startX, startZ);
     const endNode = this.findNearestNode(targetX, targetZ);
 
@@ -79,7 +90,7 @@ export class NavigationNetwork {
     }
 
     if (!found) {
-      return [{ x: endNode.x, z: endNode.z }, { x: targetX, z: targetZ }];
+      return null;
     }
 
     // Reconstruct path
@@ -97,6 +108,22 @@ export class NavigationNetwork {
 
     pathPoints.push({ x: targetX, z: targetZ });
     return pathPoints;
+  }
+
+  /** Never-null wrapper used by read-only callers. */
+  public findPath(
+    startX: number,
+    startZ: number,
+    targetX: number,
+    targetZ: number
+  ): { x: number; z: number }[] {
+    const path = this.findPathOrNull(startX, startZ, targetX, targetZ);
+    if (path) return path;
+    const endNode = this.findNearestNode(targetX, targetZ);
+    return [
+      { x: endNode.x, z: endNode.z },
+      { x: targetX, z: targetZ },
+    ];
   }
 }
 

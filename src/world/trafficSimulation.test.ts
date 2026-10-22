@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { laneEndsAtSignal, trafficNetwork } from './roadNetwork';
 import { CAR_LENGTH, SAFE_GAP, STOP_BACKOFF, TrafficSimulation } from './trafficSimulation';
 import { SignalController, DEFAULT_SIGNAL_TIMINGS } from './trafficSignals';
+import { zonesForMovementPath } from './pedestrianCrossings';
 
 const DT = 1 / 30;
 
@@ -156,6 +157,87 @@ describe('junction discipline', () => {
 
     expect(violations).toBe(0);
     expect(crossings).toBeGreaterThan(0);
+  });
+});
+
+describe('pedestrian right of way', () => {
+  /** A signalized lane whose chosen turn path sweeps over a real zebra. */
+  const laneWithCrossing = () => {
+    for (const lane of trafficNetwork.lanes) {
+      if (!laneEndsAtSignal(lane)) continue;
+      const movement = (trafficNetwork.movementsByLane.get(lane.id) ?? []).find(
+        (m) => zonesForMovementPath(m.id, m.path).length > 0
+      );
+      if (movement) return { lane, movement, zone: zonesForMovementPath(movement.id, movement.path)[0] };
+    }
+    throw new Error('no signalized movement crosses a crosswalk');
+  };
+
+  test('a car waits at the stop line while a walker is on its zebra', () => {
+    const { lane, movement, zone } = laneWithCrossing();
+    const sim = singleCarSim();
+    const car = sim.createVehicle(lane.id, lane.length - 26);
+    // Force the turn that crosses the crossing, then green for that approach.
+    car.nextMovementId = movement.id;
+    sim.time = greenTimeFor(sim, lane);
+
+    const walkers = [{ x: zone.x, z: zone.z }];
+    for (let i = 0; i < 8 / DT; i++) sim.update(DT, undefined, walkers);
+
+    expect(car.state).toBe('lane');
+    // Held exactly at its stop line, not driven over the zebra.
+    expect(car.s).toBeLessThanOrEqual(lane.length - STOP_BACKOFF + 0.02);
+    expect(car.speed).toBeLessThan(0.2);
+
+    // Walker steps off: the car proceeds through the junction.
+    const before = sim.completedCrossings;
+    for (let i = 0; i < 8 / DT; i++) sim.update(DT, undefined, [{ x: 500, z: 500 }]);
+    expect(sim.completedCrossings).toBeGreaterThan(before);
+  });
+
+  test('a car brakes for a walker standing in its lane instead of driving through', () => {
+    const lane = trafficNetwork.lanes.find((l) => l.length > 60)!;
+    const sim = singleCarSim();
+    const car = sim.createVehicle(lane.id, 10);
+
+    const walker = { x: lane.startX + lane.dirX * 26, z: lane.startZ + lane.dirZ * 26 };
+    for (let i = 0; i < 6 / DT; i++) sim.update(DT, undefined, [walker]);
+
+    const gap = Math.hypot(walker.x - car.x, walker.z - car.z);
+    expect(gap).toBeGreaterThan(CAR_LENGTH / 2);
+    expect(car.speed).toBeLessThan(0.2);
+
+    for (let i = 0; i < 6 / DT; i++) sim.update(DT, undefined, [{ x: 500, z: 500 }]);
+    expect(car.speed).toBeGreaterThan(0.5);
+  });
+
+  test('no car ever overlaps a walker over a long run with moving pedestrians', () => {
+    const sim = new TrafficSimulation();
+    const walkers = [
+      { x: 0, z: -9.5, dx: 3.2, dz: 0 },
+      { x: 0, z: 9.5, dx: -3.2, dz: 0 },
+      { x: 10.25, z: 60, dx: 0, dz: 3.2 },
+    ];
+
+    let closest = Infinity;
+    for (let i = 0; i < 180 / DT; i++) {
+      for (const w of walkers) {
+        w.x += w.dx * DT;
+        w.z += w.dz * DT;
+        if (Math.abs(w.x) > 14) w.x = -Math.sign(w.dx) * 14;
+        if (Math.abs(w.z - 60) > 10 && w.dz !== 0) w.z = 60 - Math.sign(w.dz) * 10;
+      }
+      sim.update(DT, undefined, walkers);
+      for (const v of sim.vehicles) {
+        for (const w of walkers) {
+          closest = Math.min(closest, Math.hypot(v.x - w.x, v.z - w.z));
+        }
+      }
+    }
+
+    // A walker can walk into a stopped car, so allow for bodies touching; what
+    // must never happen is a car driving through one (car centre on top of it).
+    expect(closest).toBeGreaterThan(CAR_LENGTH / 2);
   });
 });
 

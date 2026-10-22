@@ -209,8 +209,12 @@ export class TrafficSystem {
     }
   }
 
-  public update(delta: number, playerPos: THREE.Vector3) {
-    this.simulation.update(delta, { x: playerPos.x, z: playerPos.z });
+  public update(
+    delta: number,
+    playerPos: THREE.Vector3,
+    pedestrians: { x: number; z: number }[] = []
+  ) {
+    this.simulation.update(delta, { x: playerPos.x, z: playerPos.z }, pedestrians);
     this.signalTime = this.simulation.time;
     this.syncMeshes();
     this.updateSignalHeads();

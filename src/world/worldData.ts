@@ -121,21 +121,91 @@ export const INTERSECTIONS: Intersection[] = [
 export interface Crosswalk {
   id: string;
   intersectionId: string;
+  /** Road whose carriageway this zebra is painted across. */
+  crossesRoadId: string;
+  /**
+   * Traffic phase pedestrians walk WITH while on this zebra.
+   *
+   * A pedestrian is always parallel to the traffic on the road they are NOT
+   * crossing: someone walking east-west over the north-south avenue crosses
+   * while the east-west road has its green, and vice versa. Crosswalk geometry
+   * and this phase are derived from the same two roads, so the paint, the
+   * signal phases and the nav graph cannot drift apart.
+   */
+  walkPhase: SignalPhase;
   x: number;
   z: number;
+  /** Extent along X. */
   width: number;
+  /** Extent along Z. */
   depth: number;
   y: number;
 }
 
 /** How far north/south of an intersection center its zebra crossings sit. */
 export const CROSSWALK_OFFSET = 9.5;
+/** Depth of the zebras that cross the avenue (walking east-west). */
+export const CROSSWALK_DEPTH = 4.5;
+/**
+ * Kerb offset of the zebras that cross the east-west streets (walking
+ * north-south): they sit on the avenue's footway, just outside the junction
+ * box (half-width 8) and inside the stop line (STOP_LINE_OFFSET).
+ */
+const CROSSWALK_KERB_X = 10.25;
 
-/** Zebra crossings on the north and south approaches of every intersection. */
-export const CROSSWALKS: Crosswalk[] = INTERSECTIONS.flatMap((ix) => [
-  { id: `${ix.id}_north`, intersectionId: ix.id, x: ix.x, z: ix.z - CROSSWALK_OFFSET, width: 16, depth: 4.5, y: 0.03 },
-  { id: `${ix.id}_south`, intersectionId: ix.id, x: ix.x, z: ix.z + CROSSWALK_OFFSET, width: 16, depth: 4.5, y: 0.03 },
-]);
+export const CROSSWALKS: Crosswalk[] = INTERSECTIONS.flatMap((ix) => {
+  const nsRoad = ROADS.find((r) => r.id === ix.roads[0] && r.orientation === 'north_south');
+  const ewRoad = ROADS.find((r) => r.id === ix.roads[1] && r.orientation === 'east_west');
+  if (!nsRoad || !ewRoad) return [];
+
+  return [
+    {
+      id: `${ix.id}_north`,
+      intersectionId: ix.id,
+      crossesRoadId: nsRoad.id,
+      walkPhase: ewRoad.orientation,
+      x: ix.x,
+      z: ix.z - CROSSWALK_OFFSET,
+      width: nsRoad.width,
+      depth: CROSSWALK_DEPTH,
+      y: 0.03,
+    },
+    {
+      id: `${ix.id}_south`,
+      intersectionId: ix.id,
+      crossesRoadId: nsRoad.id,
+      walkPhase: ewRoad.orientation,
+      x: ix.x,
+      z: ix.z + CROSSWALK_OFFSET,
+      width: nsRoad.width,
+      depth: CROSSWALK_DEPTH,
+      y: 0.03,
+    },
+    {
+      id: `${ix.id}_west`,
+      intersectionId: ix.id,
+      crossesRoadId: ewRoad.id,
+      walkPhase: nsRoad.orientation,
+      x: ix.x - CROSSWALK_KERB_X,
+      z: ix.z,
+      width: CROSSWALK_DEPTH,
+      depth: ewRoad.width,
+      // above the footway strip it is painted over
+      y: 0.05,
+    },
+    {
+      id: `${ix.id}_east`,
+      intersectionId: ix.id,
+      crossesRoadId: ewRoad.id,
+      walkPhase: nsRoad.orientation,
+      x: ix.x + CROSSWALK_KERB_X,
+      z: ix.z,
+      width: CROSSWALK_DEPTH,
+      depth: ewRoad.width,
+      y: 0.05,
+    },
+  ];
+});
 
 // ---------------------------------------------------------------------------
 // Traffic signals (DECLARATIVE DATA ONLY — no signal behavior yet)

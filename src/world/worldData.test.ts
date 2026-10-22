@@ -20,11 +20,42 @@ describe('worldData invariants', () => {
     expect(SIDEWALKS.length).toBeGreaterThan(0);
   });
 
-  test('every crosswalk belongs to a known intersection', () => {
+  test('every intersection has four crosswalks, one per approach, on real roads', () => {
     const intersectionIds = new Set(INTERSECTIONS.map((ix) => ix.id));
-    expect(CROSSWALKS.length).toBe(INTERSECTIONS.length * 2);
+    expect(CROSSWALKS.length).toBe(INTERSECTIONS.length * 4);
+
     for (const cw of CROSSWALKS) {
       expect(intersectionIds.has(cw.intersectionId)).toBe(true);
+      const road = ROADS.find((r) => r.id === cw.crossesRoadId);
+      expect(road, `crosswalk ${cw.id} crosses a missing road`).toBeDefined();
+      expect(road?.orientation).toBeDefined();
+
+      // Pedestrians walk with the traffic of the OTHER road at the junction.
+      const ix = INTERSECTIONS.find((i) => i.id === cw.intersectionId)!;
+      const otherRoadId = ix.roads.find((id) => id !== cw.crossesRoadId)!;
+      const otherRoad = ROADS.find((r) => r.id === otherRoadId)!;
+      expect(cw.walkPhase).toBe(otherRoad.orientation);
+    }
+
+    // Four distinct approaches per intersection.
+    for (const ix of INTERSECTIONS) {
+      const ids = CROSSWALKS.filter((c) => c.intersectionId === ix.id).map((c) => c.id);
+      expect(new Set(ids).size).toBe(4);
+    }
+  });
+
+  test('crosswalk paint spans the carriageway it crosses', () => {
+    for (const cw of CROSSWALKS) {
+      const road = ROADS.find((r) => r.id === cw.crossesRoadId)!;
+      // The zebra lies over its road: its long side is the road width, and its
+      // centre sits within the road's width band.
+      const longSide = Math.max(cw.width, cw.depth);
+      expect(longSide).toBeCloseTo(road.width, 5);
+      if (road.orientation === 'north_south') {
+        expect(Math.abs(cw.x - road.centerX)).toBeLessThan(road.width / 2);
+      } else {
+        expect(Math.abs(cw.z - road.centerZ)).toBeLessThan(road.width / 2);
+      }
     }
   });
 
